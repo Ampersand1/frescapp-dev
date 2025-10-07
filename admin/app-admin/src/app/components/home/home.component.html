@@ -1,0 +1,49 @@
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-md-3 mb-4" *ngIf="role == 'administrador'">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Productos</h5>
+          <p class="card-text">Administrar productos</p>
+          <button class="btn btn-primary btn-block" routerLink="/productos">Ver productos</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-4" *ngIf="role == 'administrador'">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Órdenes</h5>
+          <p class="card-text">Administrar órdenes</p>
+          <button class="btn btn-primary btn-block" routerLink="/ordenes">Ver órdenes</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-4" *ngIf="role == 'administrador'">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Clientes</h5>
+          <p class="card-text">Administrar clientes</p>
+          <button class="btn btn-primary btn-block" routerLink="/clientes">Ver clientes</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-4" *ngIf="role == 'administrador'">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Reportes</h5>
+          <p class="card-text">Ver reportes</p>
+          <button class="btn btn-primary btn-block" routerLink="/reports">Ver reportes</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-4" *ngIf="role == 'administrador'  || role == 'comercial'">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">CRM</h5>
+          <p class="card-text">Gestionar nuevos Clientes</p>
+          <button class="btn btn-primary btn-block" routerLink="/crm">CRM</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

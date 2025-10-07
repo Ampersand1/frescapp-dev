@@ -1,0 +1,71 @@
+<div class="container-fluid mt-5">
+    <!-- <div class="row justify-right">
+      <div class="col-auto">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newInventory"
+        data-bs-dismiss="modal">
+          <i class="fas fa-plus-circle fa-lg"></i>
+          Nuevo Inventario</button>
+      </div>
+    </div> -->
+
+    <div *ngIf="messageInventory" class="alert alert-success alert-dismissible fade show" role="alert">
+      {{ messageInventory }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Productos Registrados</th>
+          <th>Costo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let inventory of this.inventories">
+          <td>{{ inventory.close_date }}</td>
+          <td id="product-count">
+            {{ productsCost(inventory.products) }}
+          </td>
+          <td id="cost">
+            {{ productsValue(inventory.products) | currency:'USD':'symbol':'1.2-2' }}
+          <td>
+            <div class="row">
+              <div class="col-auto">
+                <span (click)="navigateToInventory(inventory.id)" style="cursor: pointer;" >
+                  <i class="fas fa-pencil fa-lg text-primary"></i>
+                </span>
+              </div>
+              <!-- <div class="col-auto" *ngIf="hasRole(['administrador'])">
+                <span (click)="delete_inventory(inventory.id)" style="cursor: pointer;">
+                  <i class="fas fa-trash fa-lg text-danger"></i>
+                </span>
+              </div> -->
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="modal fade" id="newInventory" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="newInventory">Nuevo Inventario</h5>
+        </div>
+        <div class="modal-body">
+          <div class="container">
+            <div class="form-group">
+              <label for="fecha">Fecha:</label>
+              <input type="date" class="form-control" id="fecha" name="fecha" [(ngModel)]="fechaNewInventory">
+            </div>
+            <br>
+            <div class="text-right"> <!-- Alineación a la derecha -->
+              <button class="btn btn-primary" (click)="newInventory()">Nuevo Inventario</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,177 @@
+<div class="container-fluid mt-5">
+  <div class="row justify-right">
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#customerModal"
+        data-bs-dismiss="modal" (click)="openEditModal({}, 'new')">
+        <i class="fas fa-plus-circle fa-lg"></i>
+        Nuevo Cliente</button>
+    </div>
+    <div class="col-10">
+      <input type="text" class="form-control" placeholder="Buscar cliente..." [(ngModel)]="searchText"
+        (keyup)="filterCustomers()">
+    </div>
+    <br>
+    <div class="row">
+      <div class="container-fluid">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Teléfono</th>
+              <th>Documento</th>
+              <th>Tipo de Documento</th>
+              <th>Dirección</th>
+              <th>Nombre del Restaurante</th>
+              <th>Email</th>
+              <th>Categoría</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let customer of filteredCustomers">
+              <td>{{ customer.name }}</td>
+              <td>{{ customer.phone }}</td>
+              <td>{{ customer.document }}</td>
+              <td>{{ customer.document_type }}</td>
+              <td>{{ customer.address }}</td>
+              <td>{{ customer.restaurant_name }}</td>
+              <td>{{ customer.email }}</td>
+              <td>{{ customer.category }}</td>
+              <td>
+                <div class="row justify-content-center">
+                <div class="col-auto">
+                  <button class="btn btn-primary" title="Edit" (click)="openEditModal(customer, 'edit')" data-bs-toggle="modal" data-bs-target="#customerModal"
+                  data-bs-dismiss="modal"><i class="fa fa-pencil" ></i></button>
+                </div>
+                <!-- <div class="col-auto">
+                  <button class="btn btn-danger"  title="Delete" (click)="delete_customer(customer)"><i class="fa fa-trash"></i></button>
+                </div> -->
+                <div class="col-auto">
+                  <button class="btn btn-secondary"  title="changePassword" (click)="openEditModal(customer, 'edit')"  data-bs-toggle="modal" data-bs-target="#passwordModal"
+                  data-bs-dismiss="modal"><i class="fa fa-lock"></i></button>
+                </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="customerModalLabel">{{ isNewCustomer ? 'Nuevo Cliente' : 'Editar Cliente' }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form #customerForm="ngForm">
+          <div class="mb-3">
+            <label for="name" class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="name" [(ngModel)]="selectedCustomer.name" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="phone" class="form-label">Teléfono</label>
+            <input type="text" class="form-control" id="phone" [(ngModel)]="selectedCustomer.phone" name="phone" required>
+          </div>
+          <div class="mb-3">
+            <label for="document" class="form-label">Documento</label>
+            <input type="text" class="form-control" id="document" [(ngModel)]="selectedCustomer.document" name="document" required>
+          </div>
+          <div class="mb-3">
+            <label for="documentType" class="form-label">Tipo de Documento</label>
+            <select class="form-control" id="documentType" name="documentType"
+            [(ngModel)]="selectedCustomer.document_type">
+            <option *ngFor="let type of documentTypes" [value]="type">{{ type }}</option>
+          </select>
+          </div>
+          <div class="mb-3">
+            <label for="address" class="form-label">Dirección</label>
+            <input type="text" class="form-control" id="address" [(ngModel)]="selectedCustomer.address" name="address">
+          </div>
+          <div class="mb-3">
+            <label for="restaurantName" class="form-label">Nombre del Restaurante</label>
+            <input type="text" class="form-control" id="restaurantName" [(ngModel)]="selectedCustomer.restaurant_name" name="restaurantName">
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" [(ngModel)]="selectedCustomer.email" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label for="status" class="form-label">Estado</label>
+            <select class="form-control" id="status" name="status"
+            [(ngModel)]="selectedCustomer.status">
+            <option *ngFor="let status of statusTypes" [value]="status">{{ status }}</option>
+          </select>
+          </div>
+          <div class="mb-3">
+            <label for="category" class="form-label">Categoría</label>
+            <select class="form-control" id="category" name="category"
+            [(ngModel)]="selectedCustomer.category">
+            <option *ngFor="let category of cateroryTypes" [value]="category">{{ category }}</option>
+          </select>
+          </div>
+          <div class="mb-3">
+            <label for="role" class="form-label">Rol</label>
+            <select class="form-control" id="role" name="role"
+            [(ngModel)]="selectedCustomer.role">
+            <option *ngFor="let role of roles" [value]="role">{{ role }}</option>
+          </select>
+          </div>
+          <div class="mb-3">
+            <label for="list_products" class="form-label">Productos</label>
+            <div *ngFor="let product of selectedCustomer.list_products; let i = index; trackBy: trackByIndex" class="input-group mb-2">
+              <input type="text" class="form-control" [(ngModel)]="selectedCustomer.list_products[i]" name="product-{{i}}" />
+              <button type="button" class="btn btn-danger" (click)="removeProduct(i)">Eliminar</button>
+            </div>
+            <button type="button" class="btn btn-success" (click)="addProduct()">Añadir Producto</button>
+          </div>  
+          <div class="mb-3" *ngIf="isNewCustomer">
+            <label for="password" class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="password" [(ngModel)]="selectedCustomer.password" name="password" required>
+          </div>        
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="saveCustomer()" *ngIf="!isNewCustomer" data-bs-dismiss="modal">Guardar</button>
+        <button type="button" class="btn btn-primary" (click)="createCustomer()" *ngIf="isNewCustomer" data-bs-dismiss="modal">Crear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para actualizar contraseña -->
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="passwordModalLabel">Actualizar Contraseña</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form #passwordForm="ngForm">
+          <div class="mb-3">
+            <label for="password" class="form-label">Nueva Contraseña</label>
+            <input type="password" class="form-control" id="password" [(ngModel)]="userPassword.newPassword" name="newPassword" required >
+          </div>
+          <div class="mb-3">
+            <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+            <input type="password" class="form-control" id="confirmPassword" [(ngModel)]="userPassword.confirmPassword" name="confirmPassword" required >
+          </div>
+          <div *ngIf="passwordMismatch" class="text-danger">
+            Las contraseñas no coinciden.
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" [disabled]="passwordForm.invalid || passwordMismatch" (click)="changePassword()" data-bs-dismiss="modal">Actualizar Contraseña</button>
+      </div>
+    </div>
+  </div>
+</div>

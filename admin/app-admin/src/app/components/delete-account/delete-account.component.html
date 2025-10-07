@@ -1,0 +1,23 @@
+<div class="container mt-5 d-flex justify-content-center align-items-center">
+  <div class="row">
+    <div class="col-auto text-center">
+      <img src="assets\banner.png" alt="Logo" class="img-fluid mb-4" width="300" height="300">
+    </div>
+    <div class="col-auto">
+      <div class="container-fluid">
+        <br><br>
+        <div class="form-group">
+          <input type="email" class="form-control" id="email" placeholder="Email" [(ngModel)]="user_email">
+        </div>
+        <br>
+        <div class="form-group">
+          <input type="password" class="form-control" id="password" placeholder="Contraseña" [(ngModel)]="password">
+        </div>
+        <br>
+        <button type="button" class="btn" style="background-color: #97D700;" (click)="delete()">Eliminar cuenta</button>
+        <div *ngIf="mensajeError" class="text-danger">{{ mensajeError }}</div>
+        <div *ngIf="mensajeSuccess" class="text-success">{{ mensajeSuccess }}</div>
+      </div>
+    </div>
+  </div>
+</div>

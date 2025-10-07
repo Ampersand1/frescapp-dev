@@ -1,0 +1,52 @@
+<div class="container-fluid mt-5">
+  <div class="row justify-right">
+    <div class="col">
+      <input type="text" class="form-control" placeholder="Buscar producto..." [(ngModel)]="searchText"
+        (keyup)="filterProducts()" />
+    </div>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th (click)="sortBy('name')">Nombre</th>
+        <th (click)="sortBy('price_sale_today')">Hoy</th>
+        <th (click)="sortBy('price_sale_yesterday')">Ayer</th>
+        <th (click)="sortBy('price_sale_last_tuesday')">Semana Pasada</th>
+        <th (click)="sortBy('variation_yesterday_today')">% Ayer</th>
+        <th (click)="sortBy('variation_last_week_today')">% Semana Pasada</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let product of filteredProducts">
+        <td>{{ product.name }}</td>
+        <td>{{ product.price_sale_today | currency:'USD':'symbol':'1.0-0' }}</td>
+        <td>{{ product.price_sale_yesterday | currency:'USD':'symbol':'1.0-0' }}</td>
+        <td>{{ product.price_sale_last_tuesday | currency:'USD':'symbol':'1.0-0' }}</td>
+        <td>
+          <span
+            class="badge rounded-pill"
+            [ngClass]="{
+              'bg-danger': product.variation_yesterday_today > 0,
+              'bg-success': product.variation_yesterday_today < 0,
+              'bg-warning': product.variation_yesterday_today === 0
+            }"
+          >
+            {{ product.variation_yesterday_today | number:'1.1-1' }}%
+          </span>
+        </td>
+        <td>
+          <span
+            class="badge rounded-pill"
+            [ngClass]="{
+              'bg-danger': product.variation_last_week_today > 0,
+              'bg-success': product.variation_last_week_today < 0,
+              'bg-warning': product.variation_last_week_today === 0
+            }"
+          >
+            {{ product.variation_last_week_today | number:'1.1-1' }}%
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

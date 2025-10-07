@@ -1,0 +1,55 @@
+<!-- src/app/strikes-list/strikes-list.component.html -->
+
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <input
+      class="form-control w-50"
+      type="text"
+      placeholder="Buscar en cualquier columna..."
+      [(ngModel)]="searchTerm"
+      (ngModelChange)="onSearchChange()"
+    />
+    <button class="btn btn-primary" (click)="goToCreate()">
+      Nuevo Strike
+    </button>
+  </div>
+
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>#</th> <!-- Nueva columna para el índice -->
+      <th>Order #</th>
+      <th>SKU</th>
+      <th>Producto</th>
+      <th>Tipo</th>
+      <th>Cantidad</th>
+      <th>Detalle</th>
+      <th>Fecha</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let s of filteredStrikes; let i = index">
+      <td>{{ i + 1 }}</td> <!-- Mostrar índice -->
+      <td>{{ s.order_number }}</td>
+      <td>{{ s.sku || '-' }}</td>
+      <td>{{ s.name || '-' }}</td>
+      <td>{{ typeLabels[s.strike_type] || s.strike_type }}</td>
+      <td>{{ s.missing_quantity }}</td>
+      <td>{{ s.detail }}</td>
+      <td>{{ s.timestamp | date:'short' }}</td>
+      <td>
+        <button class="btn btn-sm btn-secondary me-2" (click)="goToEdit(s.id!)" *ngIf="
+          (s.timestamp | date:'yyyy-MM-dd') === (today | date:'yyyy-MM-dd')">
+          Editar
+        </button>
+        <button class="btn btn-sm btn-danger" (click)="delete(s.id!)" *ngIf="
+          (s.timestamp | date:'yyyy-MM-dd') === (today | date:'yyyy-MM-dd')">
+          Eliminar
+        </button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+</div>

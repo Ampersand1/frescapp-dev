@@ -1,0 +1,113 @@
+<div class="container-fluid mt-5">
+    <button class="btn btn-secondary w-100" (click)="navigateToRoute()">Regresar</button>
+    <br><br>
+    <h1>Ruta del {{ this.routeSelect.close_date}}</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Ruta</th>
+                <th>Dirección</th>
+                <th>Cliente</th>
+                <th>Total Pedido</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let stop of stops" (click)="navigateToStop(stop)" data-bs-toggle="modal"
+                data-bs-target="#editStop" data-bs-dismiss="modal" [ngClass]="{
+                    'table-success': stop.status === 'Pagada',
+                    'table-warning': stop.status === 'Pendiente de pago'
+                  }">
+                <td (click)="navigateToStop(stop)">{{ stop.order }}</td>
+                <td (click)="navigateToStop(stop)">{{ stop.address }}</td>
+                <td (click)="navigateToStop(stop)">{{ stop.client_name }}</td>
+                <td (click)="navigateToStop(stop)">{{ stop.total_to_charge | currency : 'USD'}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="editStop" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Parada No. {{stopSelect.order}}</h5>
+            </div>
+            <div class="modal-body">
+                <div class="container">
+                    <div class="form-group">
+                        <label for="client_name">Cliente:</label>
+                        <input type="client_name" class="form-control" id="client_name" name="client_name"
+                            [(ngModel)]="stopSelect.client_name" disabled>
+                    </div>
+                    <br>
+                    <div class="form-group">
+                        <label for="address">Dirección:</label>
+                        <input type="address" class="form-control" id="address" name="address"
+                            [(ngModel)]="stopSelect.address" disabled>
+                    </div>
+                    <br>
+                    <div class="row">
+                      <div class="col-6">
+                        <div class="form-group">
+                          <input type="slot" class="form-control" id="slot" name="slot"
+                              [(ngModel)]="stopSelect.slot" disabled>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div class="form-group">
+                          <input type="open_hour" class="form-control" id="open_hour" name="open_hour"
+                              [(ngModel)]="stopSelect.open_hour" disabled>
+                        </div>
+                      </div>
+                    </div>
+                    <br>
+                    <div class="form-group">
+                        <label for="cost">Total a pagar:</label>
+                        <input type="text" class="form-control" id="cost" name="cost"
+                            [value]="stopSelect.total_to_charge | currency:'USD':'symbol'" disabled>
+                    </div>
+                    <br>
+                    <div>
+                        <label>Estado:</label>
+                        <select [(ngModel)]="stopSelect.status" class="form-control" (ngModelChange)="onStatusChange($event)">
+                            <option *ngFor="let statusStop of statusStops" [ngValue]="statusStop">{{ statusStop }}
+                            </option>
+                        </select>
+                    </div>
+                    <br>
+                    <div class="form-group">
+                        <label for="total_charged">Total recibido:</label>
+                        <input type="number" class="form-control" id="total_charged" name="total_charged"
+                            [(ngModel)]="stopSelect.total_charged" [disabled]="stopSelect.status == 'Pagada'">
+                    </div>
+                    <br>
+                    <div>
+                        <label>Metodo de pago:</label>
+                        <select [(ngModel)]="stopSelect.payment_method" class="form-control">
+                            <option *ngFor="let payment_method of methedoPayments" [ngValue]="payment_method">{{ payment_method }}
+                            </option>
+                        </select>
+                    </div>
+                    <br>
+                    <div class="form-group">
+                      <label for="payment_date">Fecha Pago:</label>
+                      <input type="date" class="form-control" id="payment_date" name="payment_date"
+                          [(ngModel)]="stopSelect.payment_date">
+                  </div>
+                    <br>
+                    <div class="form-group">
+                        <label for="evidence">Evidencia (archivo o foto):</label>
+                        <input type="file" class="form-control" id="evidence" name="evidence"
+                               (change)="onFileSelected($event)">
+                    </div>
+                    <br>
+                    <a href="https://app.buyfrescapp.com:5000/api/route/route/evidence/{{stopSelect.evidence}}" target="_blank">Descargar evidencia</a>
+                    <br><br>
+                    <button class="btn btn-primary w-100" (click)="saveStop()" data-bs-dismiss="modal" [disabled]="stopSelect.status == 'Pagada' && stopSelect.payment_date == null">Guardar Parada</button>
+                    <br><br>
+                    <button class="btn btn-secondary w-100" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

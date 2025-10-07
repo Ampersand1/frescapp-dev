@@ -1,0 +1,81 @@
+<div class="container mt-3">
+  <div class="alert alert-info text-center">
+  <span *ngIf="isNuevo">🆕 Pedido nuevo</span>
+  <span *ngIf="!isNuevo">🧾 Editando pedido: <strong>{{ order.order_number }}</strong> - Cliente: <strong>{{ order.customer_name }}</strong></span>
+</div>
+  <!-- Botones toggle -->
+  <div class="btn-group btn-group-toggle mb-3 w-100 justify-content-center" data-toggle="buttons">
+    <label class="btn btn-outline-primary" [class.active]="modo === 'manual'" (click)="modo = 'manual'">
+      <input type="radio" name="modo"> Manual
+    </label>
+    <label class="btn btn-outline-primary" [class.active]="modo === 'formato'" (click)="modo = 'formato'">
+      <input type="radio" name="modo"> Formato
+    </label>
+    <label class="btn btn-outline-primary" [class.active]="modo === 'whatsapp'" (click)="modo = 'whatsapp'">
+      <input type="radio" name="modo"> WhatsApp
+    </label>
+  </div>
+
+  <!-- Sección Manual -->
+  <div *ngIf="modo === 'manual'">
+    <!-- Aquí va TODO el contenido del modal que me pasaste, sin el contenedor del modal -->
+    <!-- Solo copia desde <div class="modal-header... hasta antes del footer -->
+    <!-- Ejemplo: -->
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="m-0">Editar Orden</h5>
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-secondary ms-2"
+        (click)="toggleHeaderOrder()"
+      >
+        <i class="bi" [class.bi-chevron-down]="!showHeaderOrder" [class.bi-chevron-up]="showHeaderOrder"></i>
+      </button>
+    </div>
+    <div class="container-fluid">
+      <!-- Inserta aquí todo el contenido interno del modal que ya tienes, adaptado sin clases del modal -->
+    </div>
+    <div class="text-end mt-3">
+      <button type="button" class="btn btn-primary" (click)="saveOrder()" [disabled]="!camposCompletos()">Guardar Cambios</button>
+    </div>
+  </div>
+
+  <!-- Sección WhatsApp -->
+  <div *ngIf="modo === 'whatsapp'">
+    <div class="form-group">
+      <label for="mensaje">Mensaje para enviar por WhatsApp:</label>
+      <textarea id="mensaje" class="form-control" rows="10" [(ngModel)]="mensajeWhatsapp"></textarea>
+    </div>
+    <div class="text-end mt-3">
+      <button class="btn btn-success" (click)="enviarWhatsapp()">Enviar</button>
+    </div>
+  </div>
+
+  <!-- Sección Formato -->
+  <div *ngIf="modo === 'formato'">
+    <div class="form-group">
+      <label for="archivoCSV">Cargar archivo CSV:</label>
+      <input type="file" id="archivoCSV" class="form-control" (change)="onFileSelected($event)">
+    </div>
+    <div class="form-group mt-3">
+      <label for="cliente">Seleccionar Cliente:</label>
+      <ng-select [items]="customers" bindLabel="customLabel" bindValue="id" [searchable]="true"
+        placeholder="Selecciona cliente..." [(ngModel)]="selectedCustomerId">
+      </ng-select>
+    </div>
+    <div class="row mt-3">
+      <div class="col-md-6">
+        <label for="delivery_date">Fecha de Entrega:</label>
+        <input type="date" class="form-control" id="delivery_date" [(ngModel)]="order.delivery_date">
+      </div>
+      <div class="col-md-6">
+        <label for="deliverySlot">Horario de Entrega:</label>
+        <select class="form-control" id="deliverySlot" [(ngModel)]="order.deliverySlot">
+          <option *ngFor="let slot of deliverySlots" [value]="slot">{{ slot }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="text-end mt-3">
+      <button class="btn btn-primary" (click)="procesarArchivo()">Procesar</button>
+    </div>
+  </div>
+</div>

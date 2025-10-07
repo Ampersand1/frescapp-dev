@@ -1,0 +1,113 @@
+<div class="container-fluid mt-5">
+    <div class="row justify-right">
+
+      <div class="col-6">
+        <input type="text" class="form-control" placeholder="Buscar producto..." [(ngModel)]="searchText"
+          (keyup)="filterProducts()">
+      </div>
+      <div class="col-auto">
+        <input type="date" id="fechaInicio" class="form-control" [(ngModel)]="searchDate_start">
+      </div>
+      <div class="col-auto">
+        <input type="date" id="fechaFin" class="form-control" [(ngModel)]="searchDate_end">
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary" (click)="getProducts(searchDate_start,searchDate_end)">
+          <i class="fas fa-search"></i> Buscar
+        </button>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#update_price"
+        data-bs-dismiss="modal">
+          <i class="fas fa-refresh"></i> Actualizar precios
+        </button>
+      </div>
+    </div>
+    <br *ngIf="successMessage">
+    <div *ngIf="successMessage" class="alert alert-success" role="alert">
+      {{ successMessage }}
+    </div>
+    <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+      {{ errorMessage }}
+    </div>
+    <br>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Nombre</th>
+          <th>sku</th>
+          <th>Unidad</th>
+          <th>Categoria</th>
+          <th>Padre</th>
+          <th>Hijo</th>
+          <th>Step Unit</th>
+          <th>Step Unit Sipsa</th>
+          <th>Factor Volumen</th>
+          <th>Sipsa ID</th>
+          <th>Margen</th>
+          <th>Última Compra</th>
+          <th>Última Compra Sugerida</th>
+          <th>Última Precio Venta</th>
+          <th>Sipsa Mínimo</th>
+          <th>Sipsa Máximo</th>
+          <th>Sipsa Promedio</th>
+          <th>Precio Venta</th>
+          <th>Precio Compra</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let product of this.filteredProducts">
+          <td>{{ product.operation_date }}</td>
+          <td>{{ product.name }}</td>
+          <td>{{ product.sku }}</td>
+          <td>{{ product.unit }}</td>
+          <td>{{ product.category }}</td>
+          <td>{{ product.root }}</td>
+          <td>{{ product.child }}</td>
+          <td>{{ product.step_unit }}</td>
+          <td>{{ product.step_unit_sipsa }}</td>
+          <td>{{ product.factor_volumen }}</td>
+          <td>{{ product.sipsa_id }}</td>
+          <td>{{ product.margen }}</td>
+          <td>{{ product.last_price_purchased | currency:'USD':'symbol':'1.0-0' }}</td>
+          <td>{{ product.last_price_purchase | currency:'USD':'symbol':'1.0-0' }}</td>
+          <td>{{ product.last_price_sale | currency:'USD':'symbol':'1.0-0' }}</td>
+          <td>{{ product.minimoKg | currency:'USD':'symbol':'1.0-0' }}</td>
+          <td>{{ product.maximoKg | currency:'USD':'symbol':'1.0-0' }}</td>
+          <td>{{ product.promedioKg | currency:'USD':'symbol':'1.0-0' }}</td>
+          <td>{{ product.price_sale | currency:'USD':'symbol':'1.0-0' }}</td>
+          <td>{{ product.price_purchase | currency:'USD':'symbol':'1.0-0' }}</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+<div class="modal fade" id="update_price" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="update_price">Actulizar Precios</h5>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="!isLoading">
+            <div class="container">
+              <div class="form-group">
+                <label for="fecha">Fecha:</label>
+                <input type="date" class="form-control" id="operationDate" [(ngModel)]="operationDate">
+              </div>
+              <br>
+              <div class="text-right">
+                <button class="btn btn-primary" (click)="updatePrices(operationDate)">Actualizar Precios</button>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="isLoading" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Actualizando precios, por favor espera...</p>
+          </div>
+        </div>        
+      </div>
+    </div>
+  </div>

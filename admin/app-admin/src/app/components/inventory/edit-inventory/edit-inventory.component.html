@@ -1,0 +1,39 @@
+<div class="container-fluid mt-5">
+    <div class="row justify-right">
+        <div class="col-8">
+            <input type="text" class="form-control" placeholder="Buscar producto..." [(ngModel)]="searchTerm"
+                (ngModelChange)="filterProducts()" />
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" (click)="saveChanges()">Guardar</button>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-secondary" (click)="goBack()">Regresar</button>
+        </div>
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Sku</th>
+                <th>Nombre</th>
+                <th>Costo</th>
+                <th>Cantidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let product of filteredProducts" [ngClass]="{
+              'table-success': product.quantity > 0
+            }">
+                <td>{{ product.sku }}</td>
+                <td>{{ product.name }}</td>
+                <td>
+                    <input type="number" class="form-control" [(ngModel)]="product.cost" min="0" />
+                </td>
+                <!-- Campo editable para Cantidad -->
+                <td>
+                    <input type="number" class="form-control" [(ngModel)]="product.quantity" min="0" />
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

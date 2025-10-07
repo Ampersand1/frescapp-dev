@@ -1,0 +1,55 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" *ngIf="isLoggedIn()" style="padding: 0;">
+  <button class="navbar-toggler" type="button" (click)="toggleMenu()" [attr.aria-expanded]="!isMenuCollapsed" aria-controls="navbarNav">
+    <img src="assets/icon_app.png" alt="Logo" width="30">
+  </button>
+
+  <div class="collapse navbar-collapse" [ngClass]="{'show': !isMenuCollapsed}" id="navbarNav">
+    <ul class="navbar-nav">
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/productos" routerLinkActive="active">Productos</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/clientes" routerLinkActive="active">Clientes</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/ordenes" routerLinkActive="active">Pedidos</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador','conductor'])">
+        <a class="nav-link" routerLink="/rutas" routerLinkActive="active">Rutas</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador','comprador'])">
+        <a class="nav-link" routerLink="/purchases" routerLinkActive="active">Compras</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador','auxiliar'])">
+        <a class="nav-link" routerLink="/inventories" routerLinkActive="active">Inventario</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/precios" routerLinkActive="active">Precios</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/reports" routerLinkActive="active">Reportes</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/costos" routerLinkActive="active">Costos</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/cartera" routerLinkActive="active">Cartera</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/cierres" routerLinkActive="active">Cierres</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador'])">
+        <a class="nav-link" routerLink="/strikes" routerLinkActive="active">Strikes</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador', 'comprador', 'auxiliar'])">
+        <a class="nav-link" routerLink="/pedidos-report" routerLinkActive="active">Pedidos</a>
+      </li>
+      <li class="nav-item" *ngIf="hasRole(['administrador', 'ccomercial'])">
+        <a class="nav-link" routerLink="/institucional" routerLinkActive="active">Institucionales</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" (click)="logout()">Cerrar Sesión</a>
+      </li>
+    </ul>
+  </div>
+</nav>

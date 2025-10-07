@@ -1,0 +1,211 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<div class="container-fluid mt-5">
+    <div class="row justify-right">
+        <div class="col-6">
+            <input type="text" class="form-control" placeholder="Buscar ruta..." [(ngModel)]="searchText"
+                (keyup)="filterRoutes()">
+        </div>
+        <!-- <div class="col-auto">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRouteModal"
+                data-bs-dismiss="modal">
+                <i class="fas fa-plus-circle fa-lg"></i>
+                Nueva Ruta</button>
+        </div> -->
+    </div>
+
+    <div *ngIf="messageRoute" class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ messageRoute }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Ruta</th>
+                <th>Fecha</th>
+                <th>Costo</th>
+                <th>Cantidad de Paradas</th>
+                <th>Dinero a Recaudar</th>
+                <th>Efectivo</th>
+                <th>Davivienda</th>
+                <th>Bancolombia</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let route of filteredRoutes">
+                <td (click)="navigateToRoute(route.route_number)">{{ route.route_number }}</td>
+                <td (click)="navigateToRoute(route.route_number)">{{ route.close_date }}</td>
+                <td (click)="navigateToRoute(route.route_number)">{{ route.cost | currency:'USD' }}</td>
+                <td (click)="navigateToRoute(route.route_number)">
+                    {{ calculateTotalStops(route.id) }}
+                </td>
+                <td (click)="navigateToRoute(route.route_number)">
+                    {{ calculateTotalToCharge(route.id) | currency:'USD'}}
+                </td>
+                <td (click)="navigateToRoute(route.route_number)">
+                  {{ calculateTotalPayment(route.id,'Efectivo') | currency:'USD'}}
+              </td>
+              <td (click)="navigateToRoute(route.route_number)">
+                {{ calculateTotalPayment(route.id,'Davivienda') | currency:'USD'}}
+              </td>
+              <td (click)="navigateToRoute(route.route_number)">
+                {{ calculateTotalPayment(route.id,'Bancolombia') | currency:'USD'}}
+              </td>
+                <td>
+                    <div class="row">
+                        <!-- <div class="col-auto" *ngIf="hasRole(['administrador'])">
+                            <span (click)="deleteRoute(route)" style="cursor: pointer;">
+                                <i class="fas fa-trash fa-lg text-danger"></i>
+                            </span>
+                        </div> -->
+                        <div class="col-auto" *ngIf="hasRole(['administrador'])">
+                            <span data-bs-toggle="modal" data-bs-target="#editRouteModal" data-bs-dismiss="modal" style="cursor: pointer;" (click)="openEditRoute(route)">
+                                <i class="fas fa-calendar fa-lg text-success"></i>
+                            </span>
+                        </div>
+                        <div class="col-auto">
+                          <span data-bs-toggle="modal" data-bs-target="#RouteConsolidada" data-bs-dismiss="modal" style="cursor: pointer;" (click)="getRouteConsolidated(route.route_number)">
+                              <i class="fa fa-money fa-lg text-warning"></i>
+                          </span>
+                      </div>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal para crear una nueva ruta -->
+<div class="modal fade" id="newRouteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nueva Ruta</h5>
+            </div>
+            <div class="modal-body">
+                <div class="container">
+                    <div class="form-group">
+                        <label for="fecha">Fecha:</label>
+                        <input type="date" class="form-control" id="fecha" name="fecha" [(ngModel)]="newRouteDate">
+                    </div>
+                    <br>
+                    <div class="form-group">
+                        <label for="cost">Costo:</label>
+                        <input type="number" class="form-control" id="cost" name="cost" [(ngModel)]="newCost">
+                    </div>
+                    <br>
+                    <div class="text-right">
+                        <button class="btn btn-primary" (click)="createRoute()">Crear Ruta</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade bd-example-modal-lg" id="editRouteModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 40%;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Ruta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="container">
+                  <div class="row">
+                    <div class="col-6">
+                      <div class="form-group">
+                        <label for="editFecha">Fecha:</label>
+                        <input type="date" class="form-control" id="editFecha" [(ngModel)]="selectedRoute.close_date" [disabled]="true">
+                    </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="form-group">
+                        <label for="editCost">Costo:</label>
+                        <input type="number" class="form-control" id="editCost" [(ngModel)]="selectedRoute.cost">
+                    </div>
+                    </div>
+                  </div>
+                    <br>
+                    <div class="form-group">
+                        <label>Orden de Paradas:</label>
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Dirección</th>
+                                    <th>Conductor</th>
+                                    <th>Horario</th>
+                                    <th>Orden</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let stop of selectedRoute.stops">
+                                    <td>{{ stop.client_name }}</td>
+                                    <td>{{ stop.address }}</td>
+                                    <td>
+                                      <select class="form-control" [(ngModel)]="stop.driver_name">
+                                        <option *ngFor="let driver of drivers" [value]="driver">
+                                          {{ driver }}
+                                        </option>
+                                      </select>
+                                    </td>
+                                    <td>{{ stop.slot +" (" +stop.open_hour + ")"}}</td>
+                                    <td>
+                                        <input type="number" class="form-control" [(ngModel)]="stop.order" placeholder="Orden">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <br>
+                    <div class="text-right">
+                        <button class="btn btn-primary" (click)="updateRoute()">Guardar Cambios</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal para visualizar la consolidación de la ruta -->
+<!-- Modal para visualizar la consolidación de la ruta en cards por conductor -->
+<div class="modal fade" id="RouteConsolidada" tabindex="-1" role="dialog" aria-labelledby="RouteConsolidadaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="container">
+          <div class="row">
+            <!-- Se itera sobre el arreglo de conductores con la directiva *ngFor de Angular -->
+            <div class="col-md-4 mb-3" *ngFor="let driver of routeConsolidada">
+              <div class="card">
+                <div class="card-header">
+                  <h5 class="card-title mb-0">{{ driver.driver_name || 'Sin asignar' }}</h5>
+                </div>
+                <div class="card-body">
+                  <p><strong>Paradas:</strong> {{ driver.cantidad_stops }}</p>
+                  <ul class="list-unstyled">
+                    <li><strong>Efectivo:</strong> {{ driver.dinero_por_metodo.Efectivo | currency:'USD' }}</li>
+                    <li><strong>Davivienda:</strong> {{ driver.dinero_por_metodo.Davivienda  | currency:'USD'}}</li>
+                    <li><strong>Bancolombia:</strong> {{ driver.dinero_por_metodo.Bancolombia  | currency:'USD'}}</li>
+                  </ul>
+                  <p><strong>Cantidad de items:</strong> {{ driver.cantidad_sku }}</p>
+                  <p><strong>Peso Kg/Und:</strong> {{ driver.total_products_quantity }}</p>
+                  <ul>
+                    <li *ngFor="let order of driver.order_numbers">{{ order }}</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <!-- Fin iteración -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

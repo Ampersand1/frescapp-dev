@@ -1,0 +1,155 @@
+<div class="container-fluid mt-5">
+  <div class="row justify-right">
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCierre">
+        <i class="fas fa-plus-circle fa-lg"></i>
+        Generar cierre
+      </button>
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>GMV</th>
+        <th>Orders</th>
+        <th>Lines</th>
+        <th>COG</th>
+        <th>Purchases</th>
+        <th>Inventory</th>
+        <th>Leakage</th>
+        <th>Logística</th>
+        <th>AOV</th>
+        <th>ALV</th>
+        <th>Margen</th>
+        <th>Utilidad Neto</th>
+        <th>Efectivo</th>
+        <th>Davivienda</th>
+        <th>Bancolombia</th>
+        <th>Cartera hoy</th>
+        <th>Cartera Total</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let cierre of cierres">
+        <td>{{ cierre.close_date }}</td>
+        <td>{{ cierre.gmv | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.orders }}</td>
+        <td>{{ cierre.lines }}</td>
+        <td>{{ cierre.cogs | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.purchase | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.inventory | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.leakage | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.cost_log | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.aov | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.alv | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.margin }}</td>
+        <td>{{ cierre.cash_margin | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.cash | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.davivienda | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.bancolombia | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.cartera_today | currency:'COP':'symbol' }}</td>
+        <td>{{ cierre.cartera_total | currency:'COP':'symbol' }}</td>
+        <td>
+          <div class="row g-1">
+            <div class="col-auto">
+              <span (click)="toCierre(cierre)" style="cursor:pointer;">
+                <i class="fas fa-edit fa-lg text-primary"></i>
+              </span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="modal fade" id="newCierre" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl" role="document">
+    <form class="modal-content" (ngSubmit)="createCierre()" #cierreForm="ngForm">
+      <div class="modal-header">
+        <h5 class="modal-title">Nuevo cierre</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="fecha" class="form-label">Fecha</label>
+          <input
+            type="date"
+            id="fecha"
+            name="fecha"
+            class="form-control"
+            [(ngModel)]="newDate"
+            [min]="minDate"
+            (change)="validarFecha()"
+            required
+          >
+        </div>
+
+        <div *ngIf="validando" class="alert alert-info">Validando cierre...</div>
+
+        <div *ngIf="validacion?.errores?.length">
+          <div class="accordion" id="erroresAccordion">
+            <div *ngFor="let grupo of getErroresAgrupados() | keyvalue; let i = index" class="accordion-item">
+              <h2 class="accordion-header" id="heading-{{ i }}">
+                <button
+                  class="accordion-button collapsed"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  [attr.data-bs-target]="'#collapse-' + i"
+                  aria-expanded="false"
+                  [attr.aria-controls]="'collapse-' + i"
+                >
+                  {{ grupo.key | titlecase }} ({{ grupo.value.length }} errores)
+                </button>
+              </h2>
+              <div
+                [id]="'collapse-' + i"
+                class="accordion-collapse collapse"
+                [attr.aria-labelledby]="'heading-' + i"
+                data-bs-parent="#erroresAccordion"
+              >
+                <div class="accordion-body p-2">
+                  <table class="table table-sm table-bordered mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th style="width: 100px;">Nivel</th>
+                        <th>Mensaje</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let error of grupo.value">
+                        <td>
+                          <span [ngClass]="{
+                            'badge bg-danger': error.tipo === 'grave',
+                            'badge bg-warning text-dark': error.tipo === 'medio',
+                            'badge bg-secondary': error.tipo === 'bajo'
+                          }">{{ error.tipo }}</span>
+                        </td>
+                        <td>{{ error.mensaje || error }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="!cierreForm.form.valid || !validacionExitosa"
+        >
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,263 @@
+<div class="container-fluid mt-5">
+  <div class="row justify-right">
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary" (click)="updateCataloPage()">Actualizar catálogo Página</button>
+    </div>
+    <div class="col-6">
+      <input type="text" class="form-control" placeholder="Buscar producto..." [(ngModel)]="searchText"
+        (keyup)="filterProducts()">
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editProductModal"
+        data-bs-dismiss="modal" (click)="openEditModal({},'new')">Nuevo Producto</button>
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-success" (click)="exportToExcel(0.93)">Descargar Excel para Instituciones (7% menos de margen)</button>
+    </div>
+        <div class="col-auto">
+      <button type="button" class="btn btn-success" (click)="exportToExcel(1)">Descargar Excel</button>
+    </div>
+  </div>
+  <br *ngIf="successMessage">
+  <div *ngIf="successMessage" class="alert alert-success" role="alert">
+    {{ successMessage }}
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+    {{ errorMessage }}
+  </div>
+  <br>
+  <table class="table">
+    <thead>
+      <tr>
+        <th (click)="sortBy('sku')">sku</th>
+        <th (click)="sortBy('name')">Nombre</th>
+        <th (click)="sortBy('unit')">Unidad</th>
+        <th (click)="sortBy('child')">Padre</th>
+        <th (click)="sortBy('category')">Categoria</th>
+        <th (click)="sortBy('price_purchase')">Precio Compra</th>
+        <th (click)="sortBy('price_sale')">Precio Venta</th>
+        <th (click)="sortBy('margen')">Margen</th>
+        <th (click)="sortBy('step_unit')">Step Unit</th>
+        <th (click)="sortBy('factor_volumen')">Factor de Volumen</th>
+        <th>Imagen</th>
+        <th >Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let product of this.filteredProducts">
+        <td>{{ product.sku }}</td>
+        <td>{{ product.name }}</td>
+        <td>{{ product.unit }}</td>
+        <td>{{ product.child }}</td>
+        <td>{{ product.category }}</td>
+        <td>{{ product.price_purchase | currency:'USD':'symbol':'1.0-0' }}</td>
+        <td>{{ product.price_sale | currency:'USD':'symbol':'1.0-0' }}</td>
+        <td>{{ product.margen }}</td>
+        <td>{{ product.step_unit }}</td>
+        <td>{{ product.factor_volumen }}</td>
+        <td>
+          <img [src]="product.image" alt="Imagen del producto" class="img-fluid" width="50" height="50  ">
+        <td>
+          <!-- Utiliza solo el ícono sin el marco del botón -->
+          <span (click)="openEditModal(product,'update')" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#editProductModal" data-bs-dismiss="modal">
+            <i class="fas fa-pencil-alt fa-lg"></i> <!-- Ícono de lápiz -->
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<!-- Agrega esto al final de tu archivo HTML de productos -->
+<div class="modal fade" id="editProductModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-xl" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editProductModalLabel">Editar Producto</h5>
+      </div>
+      <div class="modal-body">
+        <div class="container">
+          <div class="row">
+            <div class="col-10">
+              <div class="form-group">
+                <label for="name">Nombre:</label>
+                <input type="text" class="form-control" id="name" name="name" [(ngModel)]="this.product.name" />
+              </div>
+            </div>
+            <div class="col-2">
+              <div class="form-group">
+                <label for="unit">Unidad:</label>
+                <select class="form-control" id="unit" name="unit" [(ngModel)]="product.unit">
+                  <option value="" disabled selected>Selecciona una unidad</option>
+                  <option value="KG">Kg</option>
+                  <option value="UNIDAD">Unidad</option>
+                  <option value="CANASTILLA">Canastilla</option>
+                  <option value="BULTO">Bulto</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-4">
+              <div class="form-group">
+                <label for="category">Categoría:</label>
+                <select class="form-control" id="category" name="category" [(ngModel)]="this.product.category">
+                  <option value="" disabled selected>Selecciona una Categoría</option>
+                  <option value="Abarrotes">Abarrotes</option>
+                  <option value="Frutas">Frutas</option>
+                  <option value="Hortalizas">Hortalizas</option>
+                  <option value="Tubérculos">Tubérculos</option>
+                  <option value="Verduras">Verduras</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-8">
+              <div class="form-group">
+                <label for="sku">SKU:</label>
+                <input type="text" class="form-control" id="sku" name="sku" [(ngModel)]="this.product.sku">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="price_sale">Precio de Venta:</label>
+                <input type="number" class="form-control" id="price_sale" name="price_sale"
+                  [(ngModel)]="this.product.price_sale">
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="price_purchase">Precio de Compra:</label>
+                <input type="number" class="form-control" id="price_purchase" name="price_purchase"
+                  [(ngModel)]="this.product.price_purchase">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="discount">Descuento:</label>
+                <input type="number" class="form-control" id="discount" name="discount"
+                  [(ngModel)]="this.product.discount">
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="margen">Margen:</label>
+                <input type="number" class="form-control" id="margen" name="margen" [(ngModel)]="this.product.margen">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="iva">IVA:</label>
+                <select class="form-control" id="iva" name="iva" [(ngModel)]="product.iva">
+                  <option value="" disabled selected>Selecciona una unidad</option>
+                  <option value="true">Si</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="iva_value">Valor IVA:</label>
+                <input type="number" class="form-control" id="iva_value" name="iva_value"
+                  [(ngModel)]="this.product.iva_value">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="iva">Padre:</label>
+                <select class="form-control" id="root" name="root" [(ngModel)]="product.root">
+                  <option value="" disabled selected>Selecciona una opción</option>
+                  <option value="1">Si</option>
+                  <option value="0">No</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="iva_value">SKU Padre:</label>
+                <input type="text" class="form-control" id="child" name="child"
+                  [(ngModel)]="this.product.child">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="description">Descripción:</label>
+            <textarea class="form-control" id="description" name="description"
+              [(ngModel)]="this.product.description"></textarea>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="image">Imagen:</label>
+                <input type="text" class="form-control" id="image" name="image" [(ngModel)]="this.product.image">
+              </div>
+              <div class="form-group">
+                <label for="status">Estado:</label>
+                <select class="form-control" id="status" name="status" [(ngModel)]="this.product.status">
+                  <option value="active">Activo</option>
+                  <option value="inactive">Inactivo</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="is_visible">Visible:</label>
+                <select class="form-control" id="is_visible" name="is_visible" [(ngModel)]="this.product.is_visible">
+                  <option value="true">Si</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="status">step unit:</label>
+                <input type="number" class="form-control" id="margen" name="margen" [(ngModel)]="this.product.step_unit">
+              </div>
+              <div class="form-group">
+                <label for="status">step unit Sipsa:</label>
+                <input type="number" class="form-control" id="margen" name="margen" [(ngModel)]="this.product.step_unit_sipsa">
+              </div>
+              <div class="form-group">
+                <label for="status">Factor de Volúmen:</label>
+                <input type="number" class="form-control" id="margen" name="margen" [(ngModel)]="this.product.factor_volumen">
+              </div>
+              <div class="form-group">
+                <label for="status">Sipsa ID:</label>
+                <input type="text" class="form-control" id="margen" name="margen" [(ngModel)]="this.product.sipsa_id">
+              </div>
+              <div class="form-group">
+                <label for="is_visible">Tipo Pricing:</label>
+                <select class="form-control" id="tipo_pricing" name="tipo_pricing" [(ngModel)]="this.product.tipo_pricing">
+                  <option value="Manual">Manual</option>
+                  <option value="Auto">Auto</option>
+                </select>
+              </div>
+              <div class="form-group">
+                  <label>Proveedor:</label>
+                  <select [(ngModel)]="this.product.proveedor" class="form-control">
+                    <option *ngFor="let supplier of suppliers" [ngValue]="supplier.nickname">{{ supplier.nickname }}</option>
+                  </select>
+            </div>
+            </div>
+            <div class="col-6">
+              <div class="col-8">
+                <img [src]="this.product.image" alt="Imagen del producto" class="img-fluid">
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" [disabled]="!camposCompletos()"
+          *ngIf="actionTipo === 'update'" (click)="updated_product()">Guardar Cambios</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+          *ngIf="actionTipo === 'new'" (click)="created_product()">Nuevo Producto</button>
+      </div>
+    </div>
+  </div>
+</div>

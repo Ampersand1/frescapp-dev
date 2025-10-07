@@ -1,0 +1,117 @@
+<div class="container-fluid mt-5">
+  <div class="row justify-right">
+    <div class="col-6">
+      <input type="text" class="form-control" placeholder="Buscar proveedor..." [(ngModel)]="searchText"
+        (keyup)="filterSuppliers()">
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newSupplierModal"
+        data-bs-dismiss="modal">Nuevo Proveedor</button>
+    </div>
+  </div>
+
+  <div *ngIf="messageSupplier" class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ messageSupplier }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Apodo</th>
+        <th>NIT</th>
+        <th>Email</th>
+        <th>Dirección</th>
+        <th>Phone</th>
+        <th>Tipo Soporte</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let supplier of filteredSuppliers">
+        <td>{{ supplier.name }}</td>
+        <td>{{ supplier.nickname }}</td>
+        <td>{{ supplier.nit }}</td>
+        <td>{{ supplier.email }}</td>
+        <td>{{ supplier.address }}</td>
+        <td>{{ supplier.phone }}</td>
+        <td>{{ supplier.typeSupport }}</td>
+        <td>
+          <div class="row">
+            <div class="col-auto">
+              <span style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#newSupplierModal"
+                (click)="setCurrentSupplier(supplier)">
+                <i class="fas fa-edit fa-lg text-primary"></i>
+              </span>
+            </div>
+            <div class="col-auto">
+              <span style="cursor: pointer;" (click)="deleteSupplier(supplier._id)">
+                <i class="fas fa-trash fa-lg text-danger"></i>
+              </span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal para Crear/Editar Proveedor -->
+<div class="modal fade" id="newSupplierModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ isEditMode ? 'Editar Proveedor' : 'Nuevo Proveedor' }}</h5>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="name">Nombre:</label>
+          <input type="text" class="form-control" id="name" [(ngModel)]="currentSupplier.name">
+        </div>
+        <div class="form-group">
+          <label for="name">Apodo:</label>
+          <input type="text" class="form-control" id="name" [(ngModel)]="currentSupplier.nickname">
+        </div>
+        <div class="form-group">
+          <label for="nit">NIT:</label>
+          <input type="text" class="form-control" id="nit" [(ngModel)]="currentSupplier.nit">
+        </div>
+        <div class="form-group">
+          <label for="email">Correo Electrónico:</label>
+          <input type="email" class="form-control" id="email" [(ngModel)]="currentSupplier.email">
+        </div>
+        <div class="form-group">
+          <label for="address">Dirección:</label>
+          <input type="text" class="form-control" id="address" [(ngModel)]="this.currentSupplier.address">
+        </div>
+        <!-- Nuevo campo para el teléfono -->
+        <div class="form-group">
+          <label for="phone">Teléfono:</label>
+          <input type="text" class="form-control" id="phone" [(ngModel)]="currentSupplier.phone">
+        </div>
+        <!-- Nueva lista desplegable para el tipo de soporte -->
+        <div class="form-group">
+          <label for="typeSupport">Tipo de Soporte:</label>
+          <select class="form-select" id="typeSupport" [(ngModel)]="currentSupplier.typeSupport">
+            <option value="Documento soporte">Documento soporte</option>
+            <option value="Factura electrónica">Factura electrónica</option>
+          </select>
+        </div>
+                <div class="form-group">
+          <label for="typeSupport">Tipo de Pago:</label>
+          <select class="form-select" id="type_transaction" [(ngModel)]="currentSupplier.type_transaction">
+            <option value="Efectivo">Efectivo</option>
+            <option value="Crédito">Crédito</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="saveSupplier()" data-bs-dismiss="modal">
+          {{ isEditMode ? 'Guardar Cambios' : 'Crear Proveedor' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

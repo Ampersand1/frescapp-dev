@@ -1,0 +1,69 @@
+<div class="container-fluid mt-3">
+  <div class="row">
+    <!-- Menú lateral -->
+    <div class="col-12 col-md-2 mb-2">
+      <button class="btn btn-outline-secondary w-100 d-md-none mb-2" (click)="colapsado = !colapsado">
+        <i class="fas" [ngClass]="{'fa-bars': colapsado, 'fa-times': !colapsado}"></i> Menú
+      </button>
+
+      <div [ngClass]="{'d-none': colapsado, 'd-md-block': true}" class="bg-light border rounded p-3">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="seccionActiva === 'pedido'" (click)="seccionActiva = 'pedido'">🛒 Nuevo Pedido</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="seccionActiva === 'cartera'" (click)="seccionActiva = 'cartera'">💰 Cartera</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="seccionActiva === 'gestion'" (click)="seccionActiva = 'gestion'">📋 Gestión</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Contenido central -->
+    <div class="col-md-7 mb-3">
+      <div *ngIf="seccionActiva === 'pedido'">
+        <h4>Nuevo Pedido</h4>
+        <!-- <app-new-pedido *ngIf="clienteSeleccionado" [cliente]="clienteSeleccionado"></app-new-pedido>
+        <p *ngIf="!clienteSeleccionado" class="text-muted">Selecciona un cliente desde la tabla para continuar.</p> -->
+      </div>
+
+      <div *ngIf="seccionActiva === 'cartera'">
+        <h4>Cartera</h4>
+        <p class="text-muted">Estado financiero del cliente seleccionado.</p>
+      </div>
+
+      <div *ngIf="seccionActiva === 'gestion'">
+        <h4>Gestión</h4>
+        <p class="text-muted">Tareas, llamadas y recordatorios del cliente seleccionado.</p>
+      </div>
+    </div>
+
+    <!-- Tabla de clientes -->
+    <div class="col-md-3">
+      <h5 class="mb-3">Clientes</h5>
+      <table class="table table-sm table-bordered">
+        <thead class="table-light">
+          <tr>
+            <th>Nombre</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cliente of clientes">
+            <td>
+              <strong>{{ cliente.nombre }}</strong><br>
+              <small>{{ cliente.direccion }}</small><br>
+              <small>{{ cliente.telefono }} - {{ cliente.nit }}</small><br>
+              <small>{{ cliente.email }}</small>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-primary" (click)="seleccionarCliente(cliente)">Nuevo Pedido</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

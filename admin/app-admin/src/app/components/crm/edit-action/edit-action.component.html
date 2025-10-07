@@ -1,0 +1,105 @@
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.42.0/mapbox-gl.css' rel='stylesheet' />
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.12.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.12.0/mapbox-gl.js"></script>
+<br><br>
+<div class="container">
+    <h3 class="mb-4">Completar acción</h3>
+    <form>
+        <!-- Fecha de Ejecución -->
+        <div class="form-group mb-3">
+            <label for="dateAction">Fecha Ejecución:</label>
+            <input type="text" class="form-control" id="dateAction" name="dateAction" [(ngModel)]="actionObject.dateAction" readonly disabled>
+        </div>
+        <button type="button" class="btn btn-secondary mb-3" (click)="openCustomers()">
+            Buscar Cliente
+          </button>
+        <div class="form-group mb-3">
+            <label for="customer">Nombre Cliente:</label>
+            <input type="text" class="form-control" id="name" name="name" [(ngModel)]="actionObject.customer.name">
+        </div>
+        <div class="form-group mb-3">
+            <label for="customer">Dirección Cliente:</label>
+            <input type="text" class="form-control" id="address" name="address" [(ngModel)]="actionObject.customer.address" >
+        </div>
+        <div class="form-group mb-3">
+            <label for="customer">Teléfono Cliente:</label>
+            <input type="text" class="form-control" id="phone" name="phone" [(ngModel)]="actionObject.customer.phone" >
+        </div>
+        <div class="form-group mb-3">
+            <label for="customer">Email Cliente:</label>
+            <input type="text" class="form-control" id="email" name="email" [(ngModel)]="actionObject.customer.email" >
+        </div>
+        <div class="form-group mb-3">
+            <div  id="map" class="map-container">
+            </div>
+        </div>
+        <div class="form-group mb-3">
+            <label for="type">Tipo de Acción:</label>
+            <input type="text" class="form-control" id="type" name="type" [(ngModel)]="actionObject.type.name" readonly disabled>
+        </div>
+
+        <!-- Número de Pedido (Cascada basado en Customer ID) -->
+        <div *ngIf="actionObject.orderNumber" class="form-group mb-3">
+            <label for="orderNumber">Número de Pedido:</label>
+            <input type="text" class="form-control" id="orderNumber" name="orderNumber" [(ngModel)]="actionObject.orderNumber" readonly disabled>
+        </div>
+
+        <!-- Manager -->
+        <div class="form-group mb-3">
+            <label for="manager">Manager:</label>
+            <input type="text" class="form-control" id="manager" name="manager" [(ngModel)]="actionObject.manager" readonly disabled>
+        </div>
+
+        <!-- Detalle -->
+        <div class="form-group mb-3">
+            <label for="actionComment">Detalle:</label>
+            <input type="text" class="form-control" id="actionComment" name="actionComment" [(ngModel)]="actionObject.actionComment" readonly disabled>
+        </div>
+        <div class="form-group mb-3">
+            <label for="solution">Solución:</label>
+            <select class="form-control" id="solution" name="solution" [(ngModel)]="actionObject.solutionType" required>
+                <option value="" disabled selected>Seleccione una solución</option>
+                <option *ngFor="let solution of solutions" [value]="solution">{{ solution }}</option>
+            </select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="solutionComment">Detalle Solución:</label>
+            <input type="text" class="form-control" id="solutionComment" name="solutionComment" [(ngModel)]="actionObject.solutionComment">
+        </div>
+        <div class="form-group mb-3">
+            <label for="solution">Estado:</label>
+            <select class="form-control" id="estado" name="estado" [(ngModel)]="actionObject.status" required>
+                <option value="" disabled selected>Seleccione un estado</option>
+                <option value="Completada"  >Completada</option>
+                <option value="Creada"  >Creada</option>
+            </select>
+        </div>
+        <div class="row">
+            <div class="col-auto">
+                <button type="button" class="btn btn-primary" (click)="completar()">Completar</button>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-secondary" (click)="backList()">Regresar</button>
+            </div>
+        </div>
+    </form>
+</div>
+<div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customerModalLabel">Buscar Cliente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" class="form-control mb-3" placeholder="Buscar cliente" [(ngModel)]="searchTerm" (input)="searchCustomer()">
+  
+          <ul class="list-group">
+            <li *ngFor="let customer of filteredCustomers" class="list-group-item" (click)="selectCustomer(customer)">
+              {{ customer.name }} - {{ customer.phone }} - {{ customer.email }} - {{ customer.address }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>

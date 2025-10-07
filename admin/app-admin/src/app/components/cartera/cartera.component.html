@@ -1,0 +1,192 @@
+<div class="container-fluid mt-5">
+  <div class="row">
+    <div class="col-3">
+      <label class="h3" style="background-color: yellow;">Total Cartera: {{ total_cartera |
+        currency:'USD':'symbol':'1.2-2' }} en {{total_orders}} ordenes </label>
+    </div>
+
+    <div class="col-6">
+      <input type="text" class="form-control" placeholder="Buscar Ordenes..." [(ngModel)]="searchText"
+        (keyup)="filterorders()">
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Fecha de Entrega</th>
+        <th>Número de Orden</th>
+        <th>Cliente</th>
+        <th>Email</th>
+        <th>Teléfono</th>
+        <th>Dirección</th>
+        <th>Total Orden</th>
+        <th>Valor Pendiente</th>
+        <th>Estado</th>
+        <th>Medio de Pago</th>
+        <th>Días Mora</th>
+        <th>Conductor</th>
+        <th> Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let order of this.ordersFiltered" (click)="navigateToStop(order)" data-bs-toggle="modal"
+      data-bs-target="#editStop" data-bs-dismiss="modal">
+        <td>{{ order.delivery_date }}</td>
+        <td>{{ order.order_number }}</td>
+        <td>{{ order.customer_name }}</td>
+        <td>{{ order.customer_email }}</td>
+        <td>{{ order.customer_phone }}</td>
+        <td>{{ order.deliveryAddress }}</td>
+        <td>{{ order.total | currency:'USD':'symbol':'1.2-2' }}</td>
+        <td>{{ order.total - order.totalPayment | currency:'USD':'symbol':'1.2-2' }}</td>
+        <td>{{ order.status }}</td>
+        <td>{{ order.paymentMethod }}</td>
+        <td>{{ daysMora(order) }}</td>
+        <td>{{ order.driver_name }}</td>
+        <td>
+          <div class="row">
+            <div class="col-auto">
+              <span (click)="openPdfModal(order.id)" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#pdfModal" data-bs-dismiss="modal">
+                <i class="fas fa-file-pdf fa-lg text-danger"></i>
+              </span>
+            </div>
+            <div class="col-auto" *ngIf="order.alegra_id != '000'">
+              <span (click)="get_invoice(order.order_number)" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#facturaModal" data-bs-dismiss="modal">
+                <i class="fas fa-file-pdf fa-lg text-primary"></i>
+              </span>
+            </div>
+
+
+          </div>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="modal fade" id="pdfModal" tabindex="-1" role="dialog" aria-labelledby="pdfModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pdfModalLabel">Remisión</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <iframe [src]="this.pdfData" type="application/pdf" width="100%" height="600px"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="facturaModal" tabindex="-1" role="dialog" aria-labelledby="facturaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pdfModalLabel">Factura</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <iframe [src]="this.facturaData" type="application/pdf" width="100%" height="600px"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editStop" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Parada No. {{stopSelect.order}}</h5>
+      </div>
+      <div class="modal-body">
+        <div class="container">
+          <div class="form-group">
+            <label for="client_name">Cliente:</label>
+            <input type="client_name" class="form-control" id="client_name" name="client_name"
+              [(ngModel)]="stopSelect.client_name" disabled>
+          </div>
+          <br>
+          <div class="form-group">
+            <label for="address">Dirección:</label>
+            <input type="address" class="form-control" id="address" name="address"
+              [(ngModel)]="stopSelect.address" disabled>
+          </div>
+          <br>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <input type="slot" class="form-control" id="slot" name="slot" [(ngModel)]="stopSelect.slot"
+                  disabled>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <input type="open_hour" class="form-control" id="open_hour" name="open_hour"
+                  [(ngModel)]="stopSelect.open_hour" disabled>
+              </div>
+            </div>
+          </div>
+          <br>
+          <div class="form-group">
+            <label for="cost">Total a pagar:</label>
+            <input type="text" class="form-control" id="cost" name="cost"
+              [value]="stopSelect.total_to_charge | currency:'USD':'symbol'" disabled>
+          </div>
+          <br>
+          <div>
+            <label>Estado:</label>
+            <select [(ngModel)]="stopSelect.status" class="form-control"
+              (ngModelChange)="onStatusChange($event)">
+              <option *ngFor="let statusStop of statusStops" [ngValue]="statusStop">{{ statusStop }}
+              </option>
+            </select>
+          </div>
+          <br>
+          <div class="form-group">
+            <label for="total_charged">Total recibido:</label>
+            <input type="number" class="form-control" id="total_charged" name="total_charged"
+              [(ngModel)]="stopSelect.total_charged" [disabled]="stopSelect.status == 'Pagada'">
+          </div>
+          <br>
+          <div>
+            <label>Metodo de pago:</label>
+            <select [(ngModel)]="stopSelect.payment_method" class="form-control">
+              <option *ngFor="let payment_method of methedoPayments" [ngValue]="payment_method">{{
+                payment_method }}
+              </option>
+            </select>
+          </div>
+          <br>
+          <div class="form-group">
+            <label for="payment_date">Fecha Pago:</label>
+            <input type="date" class="form-control" id="payment_date" name="payment_date"
+              [(ngModel)]="stopSelect.payment_date">
+          </div>
+          <br>
+          <div class="form-group">
+            <label for="evidence">Evidencia (archivo o foto):</label>
+            <input type="file" class="form-control" id="evidence" name="evidence"
+              (change)="onFileSelected($event)">
+          </div>
+          <br>
+          <a href="https://app.buyfrescapp.com:5000/api/route/route/evidence/{{stopSelect.evidence}}"
+            target="_blank">Descargar evidencia</a>
+          <br><br>
+          <button class="btn btn-primary w-100" (click)="saveStop()" data-bs-dismiss="modal"
+            [disabled]="stopSelect.status == 'Pagada' && stopSelect.payment_date == null">Guardar
+            Parada</button>
+          <br><br>
+          <button class="btn btn-secondary w-100" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

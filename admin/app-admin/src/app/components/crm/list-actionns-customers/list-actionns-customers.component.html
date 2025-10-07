@@ -1,0 +1,136 @@
+<div class="container-fluid mt-5">
+    <div class="row justify-right">
+        <div class="col-12">
+            <input type="text" class="form-control" placeholder="Buscar acción..." [(ngModel)]="searchText"
+                (keyup)="filterActions()">
+        </div>
+    </div>
+    <br>
+    <div class="row justify-right text-center">
+        <div class="col-6">
+            <input type="date" class="form-control" [(ngModel)]="searchDate" (ngModelChange)="getActions()">
+        </div>
+        <div class="col-6">
+            <button type="button" class="btn btn-primary" (click)="newAction()">Nueva Acción</button>
+        </div>
+    </div>
+    <!-- <div class="row justify-right">
+
+        <div class="col-6">
+            <select class="form-control" id="manager" name="manager" [(ngModel)]="selectedManager" (ngModelChange)="filterDateManager()">
+                <option *ngFor="let manager of managers" [value]="manager">{{ manager }}</option>
+            </select>
+        </div>
+    </div>     -->
+    <div *ngIf="messageAction" class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ messageAction }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th> Fecha </th>
+                <th> Cliente </th>
+                <th> Dirección</th>
+                <th> Opciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let action of filteredActions"
+            [attr.data-bs-toggle]="action.status !== 'Creada' ? 'modal' : null"
+            [attr.data-bs-target]="action.status !== 'Creada' ? '#viewModal' : null"
+            [ngClass]="{'table-success': action.status === 'Completada'}"
+            (click)="action.status === 'Creada' ? navigateToaAction(action.actionNumber) : viewAction(action)">
+            
+            <td>{{ action.dateAction }}</td>
+            <td>{{ action.customer.name || 'Por seleccionar...' }}</td>
+            <td>{{ action.customer.address }}</td>
+            <td>
+                <div class="row">
+                    <div class="col-auto" *ngIf="action.status == 'Completada'">
+                        <button type="button" class="btn btn-primary" (click)="resolver(action.actionNumber)"><i class="fa fa-pencil"></i></button>
+                    </div>
+                    <!-- <div class="col-auto" *ngIf="action.status == 'Creada'">
+                        <span (click)="delete_action(action.actionNumber)" style="cursor: pointer;">
+                            <i class="fas fa-trash fa-lg text-danger"></i>
+                        </span>
+                    </div>
+                    <div class="col-auto" *ngIf="action.status == 'Completada'" data-bs-toggle="modal" data-bs-target="#viewModal">
+                        <span  style="cursor: pointer;" (click)="viewAction(action)">
+                            <i class="fas fa-eye fa-lg text-info"></i>
+                        </span>
+                    </div> -->
+                </div>
+            </td>
+        </tr>        
+        </tbody>
+    </table>
+</div>
+<div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true" *ngIf="actionSelect">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewModalLabel">Detalles de la Acción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mb-3">
+                    <label>Fecha Ejecución:</label>
+                    <p>{{ actionSelect.dateAction }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Cliente:</label>
+                    <p>{{ actionSelect.customer.name }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Teléfono:</label>
+                    <p>{{ actionSelect.customer.phone }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Correo:</label>
+                    <p>{{ actionSelect.customer.email }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Dirección:</label>
+                    <p>{{ actionSelect.customer.address }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Tipo de Acción:</label>
+                    <p>{{ actionSelect.type.name }}</p>
+                </div>
+                <div *ngIf="actionSelect.orderNumber" class="form-group mb-3">
+                    <label>Número de Pedido:</label>
+                    <p>{{ actionSelect.orderNumber }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Manager:</label>
+                    <p>{{ actionSelect.manager }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Detalle Acción:</label>
+                    <p>{{ actionSelect.actionComment }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Tipo Solución:</label>
+                    <p>{{ actionSelect.solutionType }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Detalle Solución:</label>
+                    <p>{{ actionSelect.solutionComment }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Fecha Solución:</label>
+                    <p>{{ actionSelect.dateSolution }}</p>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Estado:</label>
+                    <p>{{ actionSelect.status }}</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>

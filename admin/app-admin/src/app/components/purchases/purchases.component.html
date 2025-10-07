@@ -1,0 +1,290 @@
+<div class="container-fluid mt-5">
+  <div class="row justify-right">
+    <div class="col-6">
+      <input type="text" class="form-control" placeholder="Buscar compra..." [(ngModel)]="searchText" (keyup)="filterPurchases()">
+    </div>
+    <!-- <div class="col-auto">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newPurchase"
+        data-bs-dismiss="modal">
+        <i class="fas fa-plus-circle fa-lg"></i>
+        Nueva compra</button>
+    </div> -->
+
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary"  routerLink="/suppliers">
+        <i class="fas fa-user fa-lg"></i>
+        Proveedores</button>
+    </div>
+  </div>
+
+  <div *ngIf="messagePurchase" class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ messagePurchase }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Número de Compra</th>
+        <th>Fecha</th>
+        <th>Cantidad SKU</th>
+        <th>Porc. Registrado</th>
+        <th>Porc. Registro Pacial</th>
+        <th>Porc. Facturado</th>
+        <th>Efectivo Entregado</th>
+        <th>Total Estimado</th>
+        <th>Total Real</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let purchase of this.purchases">
+        <td (click)="navigateToPurchase(purchase.purchase_number)">{{ purchase.purchase_number }}</td>
+        <td (click)="navigateToPurchase(purchase.purchase_number)">{{ purchase.date }}</td>
+        <td (click)="navigateToPurchase(purchase.purchase_number)">{{ purchase.products.length }}</td>
+        <td (click)="navigateToPurchase(purchase.purchase_number)">
+          {{ calculateRegisteredPercentage(purchase.products) }}%
+        </td>
+        <td (click)="navigateToPurchase(purchase.purchase_number)">
+          {{ calculateRegisteredParcialPercentage(purchase.products) }}%
+        </td>
+        <td (click)="navigateToPurchase(purchase.purchase_number)">
+          {{ calculateFacturadaPercentage(purchase.products) }}%
+        </td>
+        <td (click)="navigateToPurchase(purchase.purchase_number)">
+          {{ purchase.efectivoEntreado | currency:'COP ' }} <!-- Mostrar GMV -->
+        <td (click)="navigateToPurchase(purchase.purchase_number)">
+          {{ calculateTotalEstimate(purchase.products) | currency:'COP ' }} <!-- Mostrar GMV -->
+        </td>
+        <td (click)="navigateToPurchase(purchase.purchase_number)">
+          {{ calculatetotalReal(purchase.products) | currency:'COP ' }} <!-- Mostrar GMV -->
+        </td>
+        <td (click)="navigateToPurchase(purchase.purchase_number)">{{ purchase.status }}</td>
+        <td>
+          <div class="row">
+            <div class="col-auto">
+              <span (click)="openPdfModal(purchase.purchase_number)" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#pdfModal" data-bs-dismiss="modal">
+                <i class="fas fa-file-pdf fa-lg text-primary"></i>
+              </span>
+            </div>
+            <div class="col-auto" *ngIf="purchase.status == 'Creada'">
+              <span style="cursor: pointer;" data-bs-toggle="modal" (click)="setPurchase(purchase)"
+                data-bs-target="#addItem" data-bs-dismiss="modal">
+                <i class="fas fa-plus-circle fa-lg text-primary"></i>
+              </span>
+            </div>
+            <!-- <div class="col-auto" *ngIf="purchase.status == 'Creada' && hasRole(['administrador'])">
+              <span (click)="delete_purchase(purchase.purchase_number)" style="cursor: pointer;">
+                <i class="fas fa-trash fa-lg text-danger"></i>
+              </span>
+            </div> -->
+            <div class="col-auto" *ngIf="purchase.status == 'Creada'">
+              <span (click)="setPurchase(purchase)" style="cursor: pointer;" data-bs-target="#addcomments" data-bs-dismiss="modal" data-bs-toggle="modal">
+                <i class="fas fa-message fa-lg text-warning"></i>
+              </span>
+            </div>
+            <div class="col-auto" *ngIf=" hasRole(['administrador'])">
+              <span (click)="downloadExcel(purchase)" style="cursor: pointer;">
+                <i class="fas fa-file-excel fa-lg text-success"></i> <!-- Icono de Excel -->
+              </span>
+            </div>
+            <div class="col-auto">
+                <span data-bs-toggle="modal" data-bs-target="#purchaseDetailModal" data-bs-dismiss="modal" style="cursor: pointer;" (click)="openDetailPurchase(purchase)">
+                    <i class="fas fa-calendar fa-lg text-warning"></i>
+                </span>
+            </div>
+            <!-- <div class="col-auto" *ngIf="purchase.status == 'Creada' && hasRole(['administrador'])" >
+              <span (click)="sync_allegra(purchase)" style="cursor: pointer;">
+                <img src="assets/alegra.png" alt="icono" style="width: 24px; height: 24px;" />
+              </span>
+            </div> -->
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="modal fade" id="addcomments" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">📝 Agregar comentario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div class="mb-3">
+          <label for="efectivoEntreado" class="form-label">💵 Efectivo entregado:</label>
+          <input type="number" class="form-control" id="efectivoEntreado" name="efectivoEntreado" [(ngModel)]="purchaseSelect.efectivoEntreado" placeholder="Ingresa el valor entregado">
+        </div>
+
+        <div class="mb-3">
+          <label for="comentario" class="form-label">💬 Comentario:</label>
+          <textarea class="form-control" id="comentario" rows="3" [(ngModel)]="purchaseSelect.comments" placeholder="Escribe aquí tus observaciones..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-success" (click)="comments()">
+          <i class="fas fa-check-circle me-1"></i>Agregar Comentario
+        </button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times-circle me-1"></i>Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="newPurchase" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newPurchase">Nueva compra</h5>
+      </div>
+      <div class="modal-body">
+        <div class="container">
+          <div class="form-group">
+            <label for="fecha">Fecha:</label>
+            <input type="date" class="form-control" id="fecha" name="fecha" [(ngModel)]="fechaNewOrder">
+          </div>
+          <div class="form-group">
+            <label for="fecha">Efectivo entregado:</label>
+            <input type="number" class="form-control" id="efectivoEntreado" name="efectivoEntreado" [(ngModel)]="efectivoEntreado">
+          </div>
+          <br>
+          <div class="text-right"> <!-- Alineación a la derecha -->
+            <button class="btn btn-primary" (click)="newPurchase()" [disabled]="enableSaveButton()">Nueva Orden de compra</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="pdfModal" tabindex="-1" role="dialog" aria-labelledby="pdfModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pdfModalLabel">Orden de compra</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <iframe [src]="this.pdfData" type="application/pdf" width="100%" height="600px"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="addItem" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" >Agregar producto a Orden de Compra</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ng-select
+        [items]="products"
+        bindLabel="name"
+        bindValue="id"
+        [searchable]="true"
+        [(ngModel)]="productSelect"
+        (change)="onProductSelect($event)">
+      </ng-select>
+      <br>
+      <div *ngIf="newItem.sku">
+        <label >SKU:</label>
+        <span class="form-control">{{ newItem?.sku }}</span>
+      </div>
+      <br>
+      <div *ngIf="newItem.sku">
+        <label>Unidad:</label>
+        <span class="form-control">{{ this.newItem?.unit }}</span>
+      </div>
+      <br>
+      <div *ngIf="newItem.sku">
+        <label>Precio de compra sugerido:</label>
+        <span class="form-control">{{ this.newItem?.price_purchase | currency:'USD' }}</span>
+      </div>
+      <br>
+      <div *ngIf="newItem.sku">
+        <label>Cantidad Pronóstico:</label>
+        <input type="number" class="form-control"  [(ngModel)]="this.quantityProdcutSelect" />
+      </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" (click)="add_item()" [disabled]="!newItem.sku">Agregar</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="purchaseDetailModal" tabindex="-1" aria-labelledby="purchaseDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="purchaseDetailModalLabel">
+          Detalle de Compra del {{ dateDetail }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <h6 class="mt-2">Por Proveedor</h6>
+        <table class="table table-bordered table-hover table-sm">
+          <thead class="table-light">
+            <tr>
+              <th>Proveedor</th>
+              <th>Cantidad Productos</th>
+              <th>Valor Estimado</th>
+              <th>Valor Real</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let seller of perSellerArray">
+              <td>{{ seller.nombre }}</td>
+              <td>{{ seller.cantidad_productos }}</td>
+              <td>{{ seller.valor_estimado | currency:'COP':'symbol':'1.0-0' }}</td>
+              <td>{{ seller.valor_real | currency:'COP':'symbol':'1.0-0' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h6 class="mt-4">Por Tipo de Pago</h6>
+        <table class="table table-bordered table-hover table-sm">
+          <thead class="table-light">
+            <tr>
+              <th>Tipo de Pago</th>
+              <th>Cantidad Productos</th>
+              <th>Valor Estimado</th>
+              <th>Valor Real</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let payment of perPaymentArray">
+              <td>{{ payment.nombre }}</td>
+              <td>{{ payment.cantidad_productos }}</td>
+              <td>{{ payment.valor_estimado | currency:'COP':'symbol':'1.0-0' }}</td>
+              <td>{{ payment.valor_real | currency:'COP':'symbol':'1.0-0' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+</div>

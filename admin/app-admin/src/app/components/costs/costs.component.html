@@ -1,0 +1,102 @@
+<div class="container-fluid mt-5">
+    <div class="row mb-3">
+      <div class="col-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#costModal" (click) ="openNewCostModal()"
+        data-bs-dismiss="modal">
+          <i class="fas fa-plus-circle"></i> Agregar Costo
+        </button>
+      </div>
+    </div>
+  
+    <table class="table">
+        <thead>
+        <tr>
+          <th>Tipo de Costo</th>
+          <th>Detalle</th>
+          <th>Monto</th>
+          <th>Tipo Periodo</th>
+          <th>Periodo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let cost of costs">
+          <td>{{ cost.typeCost }}</td>
+          <td>{{ cost.detail }}</td>
+          <td>{{ cost.amount | currency }}</td>
+          <td>{{ cost.typePeriod }}</td>
+          <td>{{ cost.period }}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" (click)="editCost(cost)" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#costModal">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" (click)="deleteCost(cost)">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  
+    <!-- Modal -->
+    <div class="modal fade" id="costModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">{{ editingCost ? 'Editar Costo' : 'Nuevo Costo' }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group mb-3">
+              <label for="type">Tipo de Costo</label>
+              <select class="form-control" [(ngModel)]="currentCost.typeCost">
+                <option value="cost_supply">Insumos</option>
+                <option value="perssonel">Auxiliar Ops</option>
+                <option value="cost_tech">Tecnología</option>
+                <option value="wh_rent">Arriendo</option>
+                <option value="sales_force">Fuerza de Venta</option>
+                <option value="cost_others">Otro</option>
+              </select>
+            </div>
+            <div class="form-group mb-3">
+              <label for="detail">Detalle</label>
+              <input type="text" class="form-control" [(ngModel)]="currentCost.detail">
+            </div>
+            <div class="form-group mb-3">
+              <label for="amount">Monto</label>
+              <input type="number" class="form-control" [(ngModel)]="currentCost.amount">
+            </div>
+            <div class="form-group mb-3">
+              <label for="period">Periodo</label>
+              <select class="form-control" [(ngModel)]="currentCost.typePeriod" (change)="resetPeriodDetail()">
+                <option value="Mensual">Mensual</option>
+                <option value="Semanal">Semanal</option>
+                <option value="Diario">Diario</option>
+              </select>
+            </div>
+            <div class="form-group mb-3" *ngIf="currentCost.typePeriod === 'Mensual'">
+              <label for="month">Mes</label>
+              <select class="form-control" [(ngModel)]="currentCost.period">
+                <option *ngFor="let month of months" [value]="month">{{ month }}</option>
+              </select>
+            </div>
+            <div class="form-group mb-3" *ngIf="currentCost.typePeriod === 'Semanal'">
+              <label for="week">Número de Semana</label>
+              <input type="number" class="form-control" [(ngModel)]="currentCost.period">
+            </div>
+            <div class="form-group mb-3" *ngIf="currentCost.typePeriod === 'Diario'">
+              <label for="date">Fecha</label>
+              <input type="date" class="form-control" [(ngModel)]="currentCost.period">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button class="btn btn-primary" (click)="saveCost()" data-bs-dismiss="modal">
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  

@@ -1,0 +1,110 @@
+<div class="container-fluid mt-5">
+  <!-- Cuadro de búsqueda -->
+  <div class="mb-3">
+    <input type="text" class="form-control" placeholder="Buscar producto..." [(ngModel)]="searchTerm"
+      (ngModelChange)="filterProducts()" />
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th (click)="sortBy('name')">Producto</th>
+        <th (click)="sortBy('total_quantity')">Cantidad</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let product of filteredProducts" (click)="openEditModal(productModal, product)" [ngClass]="{
+            'table-success': product.status === 'Registrado',
+            'table-warning': product.status === 'Registro parcial',
+            'table-primary': product.status === 'Facturada',
+            'table-danger': (product.final_price_purchase >= product.price_purchase * 1.4 || product.final_price_purchase <= product.price_purchase * 0.4) && product.final_price_purchase != 0,
+          }">
+        <td>{{ product.category.substring(0, 3).toUpperCase() + ' - ' + product.name }}</td>
+        <td>{{ round(product.total_quantity) + ' ' + product.unit }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<ng-template #productModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">{{ this.selectedProduct.name }}</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+    <div>
+      <label>Precio de Compra sugerido:</label>
+      <span class="form-control">{{ redondear(this.selectedProduct.price_purchase ) }}</span>
+    </div>
+
+    <!-- Campo Precio de Compra con Validación -->
+    <div>
+      <label>Precio de Compra:</label>
+      <input type="number" [(ngModel)]="this.selectedProduct.final_price_purchase"
+        class="form-control" />
+    </div>
+
+    <div>
+      <label>Proveedor:</label>
+      <select [(ngModel)]="this.selectedProduct.proveedor" class="form-control">
+        <option *ngFor="let supplier of suppliers" [ngValue]="supplier">{{ supplier.nickname }}</option>
+      </select>
+    </div>
+    <div>
+      <label>Tipo de transacción:</label>
+      <select [(ngModel)]="this.selectedProduct.type_transaction" class="form-control">
+        <option *ngFor="let type of transactionTypes" [ngValue]="type">{{ type }}</option>
+      </select>
+    </div>
+
+    <div *ngIf="selectedProduct.clients?.length">
+      <h6 class="mt-3">Clientes que pidieron este producto:</h6>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let client of selectedProduct.clients">
+            <td>{{ client.client_name }}</td>
+            <td>{{ client.quantity }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <label>Inventario:</label>
+      <span class="form-control">{{ this.selectedProduct.inventory }}</span>
+    </div>
+    <div>
+      <label>Pronóstico:</label>
+      <input type="number" [(ngModel)]="this.selectedProduct.forecast"
+      class="form-control"/>
+    </div>
+  </div>
+  <!-- Botón Guardar con Condicional de Activación -->
+<div class="modal-footer d-flex align-items-center">
+  <button type="button" class="btn btn-link text-danger p-0 me-3"
+    *ngIf="hasRole(['administrador']) && selectedProduct.status != 'Facturada'"
+    (click)="deleteProduct(this.selectedProduct); modal.close('Delete click')">
+    <i class="fa fa-trash"></i>
+  </button>
+
+  <div class="ms-auto d-flex gap-2">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cancel')">Cancelar</button>
+    <button type="button" class="btn"
+      [ngClass]="{'btn-danger': !isPriceValid, 'btn-primary': isPriceValid}"
+      (click)="savePrice(); modal.close('Save click')"
+      [disabled]="!isPriceValid"
+      *ngIf="selectedProduct.status != 'Facturada'">
+      Guardar
+    </button>
+  </div>
+</div>
+
+
+</ng-template>

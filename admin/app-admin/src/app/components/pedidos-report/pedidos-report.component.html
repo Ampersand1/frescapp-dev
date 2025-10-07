@@ -1,0 +1,14 @@
+<div class="container p-3">
+  <div class="mb-3">
+    <label for="fecha" class="form-label">Fecha</label>
+    <input type="date" id="fecha" class="form-control"
+      [(ngModel)]="fechaSeleccionada" [value]="fechaHoy">
+  </div>
+
+  <div class="text-center mt-4">
+    <button class="btn btn-outline-danger border-0" (click)="descargarPDF()">
+      <i class="fas fa-file-pdf fa-5x"></i>
+    </button>
+  </div>
+</div>
+

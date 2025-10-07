@@ -1,0 +1,79 @@
+<!-- Spinner -->
+<div *ngIf="loading" class="text-center my-5 pt-5">
+  <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+    <span class="visually-hidden">Cargando...</span>
+  </div>
+</div>
+
+
+<div *ngIf="!loading" class="container" style="max-width: 85%;">
+  <!-- Resumen Mensual -->
+  <h4 class="mt-4">Resumen Mensual</h4>
+  <table class="table table-hover table-bordered table-striped align-middle shadow-sm rounded">
+    <thead class="table-light">
+      <tr>
+        <th class="text-start">Indicador</th>
+        <th *ngFor="let mes of getMeses()" class="text-end">{{ mes }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let indicador of indicadoresMensuales">
+        <td class="text-start">{{ indicador.label }}</td>
+        <td *ngFor="let valor of indicador.valores" class="text-end">
+          {{ valor.valor }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Resumen Semanal -->
+  <h4 class="mt-5">Resumen Semanal</h4>
+  <table class="table table-hover table-bordered table-striped align-middle shadow-sm rounded">
+    <thead class="table-light">
+      <tr>
+        <th class="text-start">Indicador</th>
+        <th *ngFor="let semana of getSemanas()" class="text-end">{{ semana }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let indicador of indicadoresSemanales">
+
+        <td class="text-start">{{ indicador.label }}</td>
+        <td *ngFor="let valor of indicador.valores" class="text-end">
+          {{ valor.valor  }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Resumen Diario -->
+  <h4 class="mt-5">Resumen Diario</h4>
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label>Desde:</label>
+      <input type="date" class="form-control" [(ngModel)]="fechaInicio">
+    </div>
+    <div class="col-md-6">
+      <label>Hasta:</label>
+      <input type="date" class="form-control" [(ngModel)]="fechaFin">
+    </div>
+  </div>
+
+  <table class="table table-hover table-bordered table-striped align-middle shadow-sm rounded">
+    <thead class="table-light">
+      <tr>
+        <th class="text-start">Indicador</th>
+        <th *ngFor="let dia of getFechasFiltradas()" class="text-end">{{ dia }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let indicador of indicadoresDiarios">
+        <td class="text-start">{{ indicador.label }}</td>
+        <td *ngFor="let valor of indicador.valores" class="text-end">
+          {{ valor.valor  }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+

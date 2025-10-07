@@ -1,0 +1,427 @@
+<div class="container-fluid mt-5">
+  <div class="row justify-right">
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editOrderModal"
+        data-bs-dismiss="modal" (click)="openEditModal({}, 'new')">
+        <i class="fas fa-plus-circle fa-lg"></i>
+        Nueva Orden</button>
+    </div>
+        <div class="col-auto">
+      <button type="button" class="btn btn-warning" (click)="navigateToOrden('new')">
+        <i class="fas fa-plus-circle fa-lg"></i>
+        Nueva Orden</button>
+    </div>
+    <div class="col-3">
+      <input type="text" class="form-control" placeholder="Buscar orden..." [(ngModel)]="searchText"
+        (keyup)="filterOrders()">
+    </div>
+    <div class="col-auto">
+      <input type="date" class="form-control" [(ngModel)]="searchStartDate" (change)="getOrders('date')">
+    </div>
+    <div class="col-auto">
+      <input type="date" class="form-control" [(ngModel)]="searchEndDate" (change)="getOrders('date')">
+    </div>
+    <div class="col-auto">
+      <!-- Agregamos [(ngModel)] para enlazar el modelo -->
+      <select class="form-control" [(ngModel)]="searchStatus" (change)="getOrders('status')">
+        <option *ngFor="let statusOrder of statusOrders" [value]="statusOrder">
+          {{ statusOrder }}
+        </option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <input type="text" [(ngModel)]="orderNumbertosync" placeholder="Número de la página" class="form-control">
+    </div>
+    <div class="col-auto">
+      <button (click)="sendSyncOrder(orderNumbertosync)" class="btn btn-primary">
+        <i class="fas fa-refresh fa-lg"></i>
+        Sincronizar Orden</button>
+    </div>
+    <div class="col-auto">
+      <button (click)="openPdfModal(order.id,'list')" class="btn btn-primary" data-bs-toggle="modal"
+        data-bs-target="#pdfModal" data-bs-dismiss="modal">
+        <i class="fas fa-file-pdf fa-lg"></i>
+        Descargar lista
+      </button>
+    </div>
+  </div>
+  <br *ngIf="successMessage">
+  <div *ngIf="successMessage" class="alert alert-success" role="alert">
+    {{ successMessage }}
+  </div>
+  <div *ngIf="statusCodeAlegra" class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+    <div *ngIf="statusCodeAlegra == '201'" class="alert alert-success alert-dismissible fade show" role="alert">
+      {{ messageAlegra }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div *ngIf="statusCodeAlegra != '201'" class="alert alert-danger alert-dismissible fade show" role="alert">
+      {{ messageAlegra }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  </div>
+  <br>
+  <table class="table">
+    <thead>
+      <tr>
+        <th (click)="sort('order_number')">Número de Orden <span *ngIf="sortColumn === 'order_number'">{{ sortDirection
+            }}</span></th>
+        <th (click)="sort('customer_email')">Email del Cliente <span *ngIf="sortColumn === 'customer_email'">{{
+            sortDirection }}</span></th>
+        <th (click)="sort('customer_phone')">Teléfono del Cliente <span *ngIf="sortColumn === 'customer_phone'">{{
+            sortDirection }}</span></th>
+        <th (click)="sort('customer_documentNumber')">Documento del Cliente <span
+            *ngIf="sortColumn === 'customer_documentNumber'">{{ sortDirection }}</span></th>
+        <th (click)="sort('customer_name')">Nombre del Cliente <span *ngIf="sortColumn === 'customer_name'">{{
+            sortDirection }}</span></th>
+        <th (click)="sort('delivery_date')">Fecha de Entrega <span *ngIf="sortColumn === 'delivery_date'">{{
+            sortDirection }}</span></th>
+        <th>total</th>
+        <th (click)="sort('status')">Estado <span *ngIf="sortColumn === 'status'">{{ sortDirection }}</span></th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let order of filteredOrders">
+        <td>{{ order.order_number }}</td>
+        <td>{{ order.customer_email }}</td>
+        <td>{{ order.customer_phone }}</td>
+        <td>{{ order.customer_documentNumber }}</td>
+        <td>{{ order.customer_name }}</td>
+        <td>{{ order.delivery_date | date: 'yyyy-MM-dd' }}</td>
+        <td>{{ order.total | currency}}</td>
+        <td>{{ order.status }}</td>
+        <td>
+          <div class="row">
+            <div class="col-auto" >
+              <span (click)="openEditModal(order, 'update')" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#editOrderModal" data-bs-dismiss="modal">
+                <i class="fas fa-pencil-alt fa-lg text-primary"></i>
+              </span>
+            </div>
+            <div class="col-auto">
+              <span (click)="openPdfModal(order.id,'unique')" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#pdfModal" data-bs-dismiss="modal">
+                <i class="fas fa-file-pdf fa-lg text-danger"></i>
+              </span>
+            </div>
+            <div class="col-auto" *ngIf="order.alegra_id != '000'">
+              <span (click)="get_invoice(order.order_number)" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#facturaModal" data-bs-dismiss="modal">
+                <i class="fas fa-file-pdf fa-lg text-primary"></i>
+              </span>
+            </div>
+            <div class="col-auto" *ngIf="order.alegra_id === '000'">
+              <span (click)="sync_allegra(order.order_number)" style="cursor: pointer;">
+                <img src="assets/alegra.png" alt="icono" style="width: 24px; height: 24px;" />
+              </span>
+            </div>
+            <div class="col-auto" *ngIf="order.status == 'Creada'">
+              <span (click)="delete_order(order.id)" style="cursor: pointer;">
+                <i class="fas fa-trash fa-lg text-danger"></i>
+              </span>
+            </div>
+            <div class="col-auto" (click)=" getEvidence(order.order_number)" *ngIf="order.alegra_id != '000'">
+              <span style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#evidenciaModal"
+                data-bs-dismiss="modal">
+                <i class="fas fa-eye fa-lg text-warning"></i>
+              </span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Agrega esto al final de tu archivo HTML -->
+<div class="modal fade bd-example-modal-lg" id="editOrderModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 80%;">
+    <div class="modal-content">
+      <div class="modal-header d-flex justify-content-between align-items-center">
+        <h5 class="modal-title m-0">Editar Orden</h5>
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary ms-2"
+          (click)="toggleHeaderOrder()"
+        >
+          <i class="bi" [class.bi-chevron-down]="!showHeaderOrder" [class.bi-chevron-up]="showHeaderOrder"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="container-fluid">
+          <div id="headerOrder" [class.d-none]="!showHeaderOrder">
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="documentType">Cliente:</label>
+                <ng-select [items]="customers"   bindLabel="customLabel" bindValue="id" [searchable]="true"
+                  placeholder="Escribe para buscar..." [(ngModel)]="selectedCustomerId" (change)="onCustomerSelect()">
+                </ng-select>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <div class="form-group">
+                <label for="order_number">Número de Orden:</label>
+                <input type="text" class="form-control" id="order_number" name="order_number"
+                  [(ngModel)]="order.order_number">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="customer_email">Email del Cliente:</label>
+                <input type="email" class="form-control" id="customer_email" name="customer_email"
+                  [(ngModel)]="order.customer_email" required>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="customer_name">Nombre del Cliente:</label>
+                <input type="text" class="form-control" id="customer_name" name="customer_name"
+                  [(ngModel)]="order.customer_name" required>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="documentType">Tipo de Documento:</label>
+                <select class="form-control" id="documentType" name="documentType"
+                  [(ngModel)]="order.customer_documentType">
+                  <option *ngFor="let type of documentTypes" [value]="type">{{ type }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="customer_documentNumber">Número de Documento del Cliente:</label>
+                <input type="text" class="form-control" id="customer_documentNumber" name="customer_documentNumber"
+                  [(ngModel)]="order.customer_documentNumber">
+              </div>
+            </div>
+
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="customer_phone">Teléfono del Cliente:</label>
+                <input type="text" class="form-control" id="customer_phone" name="customer_phone"
+                  [(ngModel)]="order.customer_phone">
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="total">Total:</label>
+                <input type="number" class="form-control" id="total" name="total" [(ngModel)]="order.total"
+                  [disabled]="true">
+              </div>
+            </div>
+
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="delivery_date">Fecha de Entrega:</label>
+                <input type="date" class="form-control" id="delivery_date" name="delivery_date"
+                  [(ngModel)]="order.delivery_date"
+                  [ngClass]="{'is-invalid': order.delivery_date === ''}">
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="deliverySlot">Horario de Entrega:</label>
+                <select class="form-control" id="deliverySlot" name="deliverySlot" [(ngModel)]="order.deliverySlot"
+                [ngClass]="{'is-invalid': order.deliverySlot === ''}">
+                  <option *ngFor="let slot of deliverySlots" [value]="slot">{{ slot }}</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+          <div class="row">
+
+
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="paymentMethod">Método de Pago:</label>
+                <select class="form-control" id="paymentMethod" name="paymentMethod" [(ngModel)]="order.paymentMethod"
+                [ngClass]="{'is-invalid': order.paymentMethod === ''}">
+                  <option *ngFor="let method of paymentMethods" [value]="method">{{ method }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="payment_date">Fecha de Pago:</label>
+                <input type="date" class="form-control" id="payment_date" name="payment_date"
+                  [(ngModel)]="order.payment_date">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="deliveryAddress">Dirección de Entrega:</label>
+                <input type="text" class="form-control" id="deliveryAddress" name="deliveryAddress"
+                  [(ngModel)]="order.deliveryAddress" [ngClass]="{'is-invalid': order.deliveryAddress === ''}">
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="deliveryAddressDetails">Detalles de la Dirección de Entrega:</label>
+                <input type="text" class="form-control" id="deliveryAddressDetails" name="deliveryAddressDetails"
+                  [(ngModel)]="order.deliveryAddressDetails">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="status">Estado:</label>
+                <select class="form-control" id="status" name="status" [(ngModel)]="order.status"
+                [ngClass]="{'is-invalid': order.status === ''}">
+                  <option *ngFor="let statu of statusOrders" [value]="statu">{{ statu }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="status">Vendedor:</label>
+                <select class="form-control" id="status" name="status" [(ngModel)]="order.seller_name"
+                [ngClass]="{'is-invalid': order.seller_name === ''}">
+                  <option *ngFor="let sell of seller" [value]="sell">{{ sell }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="status">Fuente:</label>
+                <select class="form-control" id="status" name="status" [(ngModel)]="order.source"
+                [ngClass]="{'is-invalid': order.source === ''}">
+                  <option *ngFor="let fuente of source" [value]="fuente">{{ fuente }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="status">Conductor:</label>
+                <select class="form-control" id="status" name="status" [(ngModel)]="order.driver_name"
+                [ngClass]="{'is-invalid': order.driver_name === ''}">
+                  <option *ngFor="let conductor of driver" [value]="conductor">{{ conductor }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+          <br><br>
+          <div class="row">
+            <div class="col-12">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th class="col-4">Producto</th>
+                    <th>sku</th>
+                    <th>Precio Venta</th>
+                    <th>Cantidad</th>
+                    <th>IVA</th>
+                    <th>Valor IVA</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let product of order.products">
+                    <ng-select [items]="products" bindLabel="name" bindValue="id" [searchable]="true"
+                      placeholder="{{product.name}}" [(ngModel)]="product.id" (change)="onProductSelect(product)">
+                    </ng-select>
+                    <td><input type="text" class="form-control" [(ngModel)]="product.sku"></td>
+                    <td>
+                      <input
+                        type="number"
+                        class="form-control"
+                        [(ngModel)]="product.price_sale"
+                      >
+                    </td>
+                    <td><input type="number" class="form-control" [(ngModel)]="product.quantity"></td>
+                    <td><input type="checkbox" [(ngModel)]="product.iva"></td>
+                    <td><input type="number" class="form-control" [(ngModel)]="product.iva_value"></td>
+                    <td>
+                      <button type="button" class="btn btn-sm btn-danger" (click)="removeProduct(product)">
+                        <i class="fas fa-trash"></i> <!-- Icono de papelera -->
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="button" class="btn btn-primary" (click)="addProduct()">Agregar Producto</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" (click)="saveOrder()" [disabled]="!camposCompletos()">Guardar
+          Cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="pdfModal" tabindex="-1" role="dialog" aria-labelledby="pdfModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pdfModalLabel">Remisión</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <iframe [src]="this.pdfData" type="application/pdf" width="100%" height="600px"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="facturaModal" tabindex="-1" role="dialog" aria-labelledby="facturaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pdfModalLabel">Factura</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <iframe [src]="this.facturaData" type="application/pdf" width="100%" height="600px"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="evidenciaModal" tabindex="-1" role="dialog" aria-labelledby="evidenciaLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pdfModalLabel">Evidencia de pago en {{this.titleEvidence }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <iframe [src]="this.evidence" type="{this.typeEvidence}" width="100%" height="600px"
+          *ngIf="this.evidence != ''"></iframe>
+        <h1 *ngIf="this.evidence == ''"> Sin evidencia registrada</h1>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

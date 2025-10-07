@@ -1,0 +1,26 @@
+<div class="container mt-5 d-flex justify-content-center align-items-center">
+  <div class="row">
+    <div class="col-12 text-center">
+      <img src="assets\banner.png" alt="Logo" class="img-fluid mb-4" width="300" height="300">
+      <!-- Agrega la imagen aquí -->
+    </div>
+    <div class="col-12 text-center">
+      <h1>Ingreso al Admin</h1>
+      <br>
+      <div class="container-fluid">
+          <div class="form-group">
+            <input type="text" class="form-control" id="username" placeholder="Usuario" [(ngModel)]="this.username">
+          </div>
+          <br>
+          <div class="form-group">
+            <input type="password" class="form-control" id="password" placeholder="Contraseña" [(ngModel)]="this.password">
+          </div>
+          <br>
+          <button type="button" class="btn btn-primary btn-block btn-lg" (click)="login()">Iniciar Sesión</button>
+          <br>
+          <div *ngIf="flag" class="alert alert-danger mt-3" role="alert">
+            {{ error }}
+      </div>
+    </div>
+  </div>
+</div>

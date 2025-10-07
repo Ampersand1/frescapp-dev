@@ -1,0 +1,120 @@
+<br><br>
+<div class="container">
+    <h3 class="mb-4">Nueva acción</h3>
+
+    <form>
+        <!-- Fecha de Ejecución -->
+        <div class="form-group mb-3">
+            <label for="dateAction">Fecha Ejecución:</label>
+            <input type="date" class="form-control" id="dateAction" name="dateAction"
+                [(ngModel)]="newActionObject.dateAction" required>
+        </div>
+        <div class="form-group mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="customerExists" [(ngModel)]="isCustomerExisting"
+                    [ngModelOptions]="{standalone: true}" (change)="onCustomerExistsChange()">
+                <label class="form-check-label" for="customerExists">
+                    ¿El cliente existe?
+                </label>
+            </div>
+        </div>
+        <!-- Cliente ID (Modal) -->
+        <div class="form-group mb-3" *ngIf="isCustomerExisting">
+            <label for="customerId">Cliente:</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="customer" name="customer"
+                    [(ngModel)]="newActionObject.customer.name" readonly required>
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal"
+                    data-bs-target="#customerModal">
+                    Seleccionar Cliente
+                </button>
+            </div>
+        </div>
+        <div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="customerModalLabel">Seleccionar Cliente</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="text" class="form-control mb-3" placeholder="Buscar cliente..."
+                            [(ngModel)]="searchText" [ngModelOptions]="{standalone: true}">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Teléfono</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let customer of filteredCustomers()">
+                                    <td>{{ customer.name }}</td>
+                                    <td>{{ customer.phone }}</td>
+                                    <td>{{ customer.email }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-primary" (click)="selectCustomer(customer)"
+                                            data-bs-dismiss="modal">
+                                            Seleccionar
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tipo de Acción -->
+        <div class="form-group mb-3">
+            <label for="type">Tipo de Acción:</label>
+            <select class="form-control" id="type" name="type" [(ngModel)]="newActionObject.type" (change)="onTypeChange()"
+                required>
+                <option value="" disabled selected>Seleccione una opción</option>
+                <option *ngFor="let action of actionTypes" [ngValue]="action">{{ action.name }}</option>
+            </select>
+        </div>
+
+        <!-- Número de Pedido (Cascada basado en Customer ID) -->
+        <div *ngIf="newActionObject.type.requiresOrder" class="form-group mb-3">
+            <label for="orderNumber">Número de Pedido:</label>
+            <select class="form-control" id="orderNumber" name="orderNumber" [(ngModel)]="newActionObject.orderNumber">
+                <option value="" disabled selected>Seleccione un pedido</option>
+                <option *ngFor="let order of orders" [value]="order.order_number">{{ order.order_number }} - ( {{
+                    order.delivery_date }})</option>
+            </select>
+        </div>
+
+        <!-- Manager -->
+        <div class="form-group mb-3">
+            <label for="manager">Manager:</label>
+            <select class="form-control" id="manager" name="manager" [(ngModel)]="newActionObject.manager" required>
+                <option value="" disabled selected>Seleccione un manager</option>
+                <option *ngFor="let manager of managers" [value]="manager">{{ manager }}</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="manager">Detalle:</label>
+            <input type="text" class="form-control" id="actionComment" name="actionComment"
+                [(ngModel)]="newActionObject.actionComment">
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-auto">
+                <button type="button" class="btn btn-primary" (click)="createAction()">Crear acción</button>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-secondary" (click)="backList()">Regresar</button>
+            </div>
+        </div>
+
+    </form>
+</div>
