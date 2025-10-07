@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# --- Node.js / Angular ---
+node_modules/
+dist/
+.env
+*.log
+
 # C extensions
 *.so
 
