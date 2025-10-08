@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from models.discount import Discount
+from ..models.discount import Discount
 from datetime import datetime
 
 discount_api = Blueprint('discount', __name__)

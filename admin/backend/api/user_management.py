@@ -6,13 +6,16 @@ from jose import JWTError, jwt
 import json
 from bson import ObjectId
 from functools import wraps
-import utils.email_utils as emails
+from ..utils import email_utils as emails
 user_api = Blueprint('user', __name__)
 client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp') 
 db = client['frescapp']
 customers_collection = db['customers']  
 users_collection = db['users']  
 
+@user_api.route('/', methods=['GET'])
+def get_users():
+    return jsonify({"message": "Ruta /api/user funcionando correctamente 🚀"})
 
 @user_api.route('/login', methods=['POST'])
 def login():

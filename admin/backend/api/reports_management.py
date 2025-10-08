@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, send_file, Response
-from models.order import Order
+from ..models.order import Order
 import json
 from flask_bcrypt import Bcrypt
 from datetime import datetime
@@ -20,9 +20,9 @@ from pymongo import MongoClient
 from reportlab.lib.units import inch
 from reportlab.platypus import PageBreak
 import locale
-from models.customer import Customer
-from models.product import Product
-from models.inventory import Inventory
+from ..models.customer import Customer
+from ..models.product import Product
+from ..models.inventory import Inventory
 from datetime import datetime, timedelta
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')

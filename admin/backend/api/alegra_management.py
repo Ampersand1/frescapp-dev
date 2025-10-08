@@ -1,12 +1,12 @@
 from flask import Blueprint, jsonify, request
-from models.customer import Customer
-import json, dump
+from ..models.customer import Customer
+import json
 from flask_bcrypt import Bcrypt
 from datetime import datetime
 import requests
 from datetime import datetime
 from pymongo import MongoClient
-from models.order import Order
+from ..models.order import Order
 
 alegra_api = Blueprint('alegra', __name__)
 client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp')

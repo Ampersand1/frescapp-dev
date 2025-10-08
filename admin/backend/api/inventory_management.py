@@ -1,7 +1,7 @@
-from models.inventory import Inventory
-from models.product import Product
-from models.purchase import Purchase
-from models.order  import Order
+from ..models.inventory import Inventory
+from ..models.product import Product
+from ..models.purchase import Purchase
+from ..models.order  import Order
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timedelta
 

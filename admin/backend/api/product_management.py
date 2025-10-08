@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from models.product import Product
-import json, dump
+from ..models.product import Product
+import json
 from flask_bcrypt import Bcrypt
 from datetime import datetime
 from decimal import Decimal

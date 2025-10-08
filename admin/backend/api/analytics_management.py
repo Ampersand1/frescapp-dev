@@ -2,8 +2,8 @@
 from flask import Blueprint, jsonify, request
 from pymongo import MongoClient
 from datetime import datetime, timedelta
-from models.order import Order
-from models.product import Product
+from ..models.order import Order
+from ..models.product import Product
 import json
 from bson import ObjectId, json_util
 

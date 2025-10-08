@@ -6,10 +6,9 @@ import locale
 from locale import setlocale, LC_ALL
 from babel import numbers
 import locale
-from models.inventory import Inventory
-from models.purchase import Purchase
-import models.route as ruta
-from models.order import Order
+from ..models.inventory import Inventory
+from ..models.purchase import Purchase
+from ..models.order import Order
 
 ue_api = Blueprint('ue', __name__)
 client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp')

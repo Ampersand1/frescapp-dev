@@ -1,13 +1,13 @@
 from flask import Blueprint, jsonify, request
-from models.cierre import Cierre  # Importa la clase Cierre desde el archivo de modelos
+from ..models.cierre import Cierre  # Importa la clase Cierre desde el archivo de modelos
 from pymongo import MongoClient
 from datetime import datetime
 from bson import json_util, ObjectId
-from models.route import Route
-from models.inventory import Inventory
-from models.purchase import Purchase
-from models.cost import Cost
-from models.order import Order
+from ..models.route import Route
+from ..models.inventory import Inventory
+from ..models.purchase import Purchase
+from ..models.cost import Cost
+from ..models.order import Order
 from datetime import datetime, timedelta
 import api.alegra_management as alegra_api
 import api.route_management as route_api
@@ -15,8 +15,8 @@ import api.purchase_management as purchase_api
 import api.inventory_management as inventory_api
 import api.ue_management as ue_api
 import time
-from models.product import Product
-from models.product_history import ProductHistory
+from ..models.product import Product
+from ..models.product_history import ProductHistory
 
 # Configuración de Flask Blueprint
 cierres_api = Blueprint('cierres', __name__)

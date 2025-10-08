@@ -1,12 +1,12 @@
 from flask import Blueprint, jsonify, request
-from models.route import Route
+from ..models.route import Route
 from pymongo import MongoClient
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os,json
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
-from models.order import Order
+from ..models.order import Order
 
 client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp')
 db = client['frescapp']

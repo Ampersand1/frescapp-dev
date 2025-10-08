@@ -1,9 +1,9 @@
 # app/api/strikes_management.py
 
 from flask import Blueprint, jsonify, request
-from models.strike import Strike
-from models.order import Order
-from models.route import Route
+from ..models.strike import Strike
+from ..models.order import Order
+from ..models.route import Route
 
 strike_api = Blueprint('strikes', __name__)
 

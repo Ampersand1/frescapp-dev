@@ -19,7 +19,7 @@ import locale
 import certifi
 import urllib.request
 from datetime import datetime, timedelta
-from models.purchase import Purchase
+from ..models.purchase import Purchase
 from collections import OrderedDict
 
 

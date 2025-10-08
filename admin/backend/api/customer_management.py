@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify, request
-from models.customer import Customer
-import json, dump
+from ..models.customer import Customer
+import json
+from json import dump
 from flask_bcrypt import Bcrypt
 from datetime import datetime
-import utils.email_utils as emails
+from ..utils import email_utils as emails
 
 customer_api = Blueprint('customer', __name__)
 

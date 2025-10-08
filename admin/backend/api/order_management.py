@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, send_file, Response
-from models.order import Order
+from ..models.order import Order
 import json
 from flask_bcrypt import Bcrypt
 from datetime import datetime
@@ -15,12 +15,12 @@ from flask import Response
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
-from utils.email_utils import send_new_order
+from ..utils.email_utils import send_new_order
 from io import StringIO
 import csv
-from models.product import Product
-from models.customer import Customer
-from models.route import Route
+from ..models.product import Product
+from ..models.customer import Customer
+from ..models.route import Route
 import os,re
 
 

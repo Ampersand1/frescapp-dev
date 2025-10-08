@@ -1,12 +1,10 @@
 import os
 
-class Config:
-    # Clave secreta para proteger las sesiones de usuario
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'tu_clave_secreta_predeterminada'
+# URI local de MongoDB (ajústala según tu entorno)
+MONGO_URI = os.getenv("MONGO_URI")
 
-    # Configuración de la base de datos MongoDB
-    MONGODB_SETTINGS = {
-        'host': os.environ.get('MONGODB_URI') or 'mongodb://localhost/frescapp'
-    }
+# Clave secreta para JWT, sesiones u otras operaciones seguras
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-    # Otras configuraciones opcionales pueden agregarse aquí
+# Otras configuraciones posibles
+DEBUG = True

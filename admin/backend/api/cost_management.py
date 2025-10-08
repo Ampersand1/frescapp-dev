@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from models.route import Route
+from ..models.route import Route
 from pymongo import MongoClient
 from datetime import datetime
 from werkzeug.utils import secure_filename
