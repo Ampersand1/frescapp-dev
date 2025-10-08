@@ -1,16 +1,7 @@
 from flask import Blueprint, jsonify, request
-from pymongo import MongoClient
-from db import get_db
+from ..db import get_db 
 
-# Inicializa el blueprint
 action_api = Blueprint('action', __name__)
-
-# Conexión centralizada (usando db.py)
-db = get_db()
-actions_collection = db['actions']
-potential_customers = db['potential_customers']
-counters_collection = db['counters']
-
 
 # Crear una nueva acción
 @action_api.route('/action', methods=['POST'])

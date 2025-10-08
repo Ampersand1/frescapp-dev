@@ -9,11 +9,11 @@ from ..models.purchase import Purchase
 from ..models.cost import Cost
 from ..models.order import Order
 from datetime import datetime, timedelta
-import api.alegra_management as alegra_api
-import api.route_management as route_api
-import api.purchase_management as purchase_api
-import api.inventory_management as inventory_api
-import api.ue_management as ue_api
+from . import alegra_management as alegra_api
+from . import route_management as route_api
+from . import purchase_management as purchase_api
+from . import inventory_management as inventory_api
+from . import ue_management as ue_api
 import time
 from ..models.product import Product
 from ..models.product_history import ProductHistory

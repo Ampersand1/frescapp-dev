@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from ..models.customer import Customer
 from ..models.product import Product
-import json, dump
+import json
 from flask_bcrypt import Bcrypt
 from datetime import datetime
 import requests

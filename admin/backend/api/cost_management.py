@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 import os,json
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
-from models.cost import Cost
+from ..models.cost import Cost
 from bson import json_util
 
 cost_api = Blueprint('cost', __name__)
