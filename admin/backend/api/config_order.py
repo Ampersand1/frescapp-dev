@@ -1,26 +1,29 @@
-from flask import Blueprint, jsonify
-from pymongo import MongoClient
+from flask import Blueprint, jsonify, current_app
 
 configOrder_api = Blueprint('config_order', __name__)
 
-# Conexión a la base de datos MongoDB
-client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp')
-db = client['frescapp']
-config_collection = db['orderConfig']
+# --- Función para obtener la base de datos correctamente dentro del contexto ---
+def get_db():
+    from ..db import get_db
+    return get_db()
 
 @configOrder_api.route('/configOrder', methods=['GET'])
-def configOrder():
+def config_order():
+    """
+    Obtiene la configuración de la orden almacenada en la colección 'orderConfig'.
+    """
     try:
-        # Obtener la configuración de la orden desde la base de datos
-        config_data = config_collection.find_one({},{'_id': 0})
+        db = get_db()
+        config_collection = db['orderConfig']
+
+        # Buscar un documento (sin el campo _id)
+        config_data = config_collection.find_one({}, {'_id': 0})
+
         if config_data:
-            # Convertir el objeto a un diccionario
-            config_dict = dict(config_data)
-            # Devolver los datos de configuración como respuesta JSON
-            return jsonify(config_dict), 200
+            return jsonify(config_data), 200
         else:
-            # Si no se encuentra ninguna configuración, devolver un mensaje de error
             return jsonify({'error': 'Configuración de orden no encontrada'}), 404
+
     except Exception as e:
-        # Capturar cualquier excepción y devolver un mensaje de error genérico
-        return jsonify({'error': 'Error al obtener la configuración de orden: {}'.format(str(e))}), 500
+        current_app.logger.error(f"Error al obtener configuración de orden: {e}")
+        return jsonify({'error': f'Error al obtener la configuración de orden: {str(e)}'}), 500

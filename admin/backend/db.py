@@ -1,17 +1,30 @@
-from flask_pymongo import PyMongo
+import os
+from pymongo import MongoClient
 
-mongo = None
+client = None
+db = None
 
-def init_db(app):
-    """Inicializa la conexión a MongoDB con la app Flask."""
-    global mongo
-    mongo = PyMongo(app)
-    return mongo
+def init_db(app=None):
+    global client, db
+
+    env = os.getenv("FLASK_ENV", "development")
+
+    # Usa MONGO_URI_PROD si estás en producción, si no, usa MONGO_URI
+    mongo_uri = os.getenv("MONGO_URI_PROD") if env == "production" else os.getenv("MONGO_URI")
+
+    if not mongo_uri:
+        raise Exception("❌ No se encontró la URI de MongoDB en las variables de entorno.")
+
+    client = MongoClient(mongo_uri)
+    db_name = mongo_uri.split('/')[-1].split('?')[0] or 'admon28'
+    db = client[db_name]
+
+    print(f"✅ Conectado a MongoDB ({env}): {db_name}")
+    return db
 
 def get_db():
-    """Obtiene la base de datos MongoDB ya inicializada."""
-    global mongo
-    if mongo:
-        return mongo.db
-    else:
-        raise Exception("Database not initialized. Call init_db(app) first.")
+    global db
+    if db is None:
+        print("⚠️ Base de datos no inicializada. Inicializando automáticamente...")
+        return init_db()
+    return db

@@ -3,8 +3,8 @@ from bson import ObjectId
 import json
 from datetime import datetime
 # Configuración del cliente de MongoDB
-client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp') 
-db = client['frescapp']
+from ..db import get_db
+db = get_db()
 inventory_collection = db['inventory']  
 
 class Inventory:

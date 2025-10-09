@@ -3,8 +3,8 @@ from pymongo import MongoClient
 from bson import ObjectId
 import json
 
-client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp') 
-db = client['frescapp']
+from ..db import get_db
+db = get_db()
 purchase_collection = db['purchases']  
 class Purchase:
     def __init__(self, 

@@ -5,8 +5,8 @@ from bson import ObjectId
 from datetime import datetime
 
 # MongoDB connection
-client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp')
-db = client['frescapp']
+from ..db import get_db
+db = get_db()
 strikes_collection = db['strikes']
 
 class Strike:

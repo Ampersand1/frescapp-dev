@@ -3,11 +3,19 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 from .db import init_db
+from flask_pymongo import PyMongo
 # ---------------------------
 # Cargar variables de entorno
 # ---------------------------
 load_dotenv()
 
+def init_db(app):
+    uri = os.getenv("MONGO_URI")  # por defecto, desarrollo
+    if not uri:
+        raise ValueError("MONGO_URI no está configurada en el archivo .env")
+    app.config["MONGO_URI"] = uri
+    mongo = PyMongo(app)
+    return mongo
 # ---------------------------
 # Inicializar aplicación Flask
 # ---------------------------
@@ -76,6 +84,13 @@ def home():
         "status": "ok",
         "message": "Backend de Frescapp funcionando correctamente UwU"
     }
+@app.route("/api/test_db")
+def test_db():
+    try:
+        mongo_stats = db.command("dbstats")
+        return {"status": "ok", "db_name": mongo_stats["db"], "collections": mongo_stats["collections"]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
 
 # ---------------------------
 # Servir archivos estáticos (imágenes compartidas)

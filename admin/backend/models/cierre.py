@@ -4,8 +4,8 @@ import json
 from datetime import datetime
 
 # Conexión a la base de datos MongoDB
-client = MongoClient('mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp')
-db = client['frescapp']
+from ..db import get_db
+db = get_db()
 cierres_collection = db['cierres']
 
 class Cierre:
