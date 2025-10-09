@@ -2,18 +2,18 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:frescapp/models/order.dart';
-import 'package:frescapp/screens/newOrder/home_screen.dart';
-import 'package:frescapp/screens/orders/orders_screen.dart';
-import 'package:frescapp/screens/profile/profile_screen.dart';
-import 'package:frescapp/services/order_service.dart';
-import 'package:frescapp/api_routes.dart';
-import 'package:frescapp/services/discount_service.dart';
+import '../../models/order.dart';
+import 'home_screen.dart';
+import '../orders/orders_screen.dart';
+import '../profile/profile_screen.dart';
+import '../../services/order_service.dart';
+import '../../api_routes.dart';
+import '../../services/discount_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:frescapp/screens/login_screen.dart';
+import '../login_screen.dart';
 
 // ignore: must_be_immutable
 class OrderConfirmationScreen extends StatefulWidget {
