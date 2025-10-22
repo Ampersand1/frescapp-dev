@@ -64,6 +64,7 @@ flutter:
   assets:
     - web/assets/images/icon_app.png
     - web/assets/images/start_icon.png
+    - web/assets/products/
 
   #   - images/a_dot_ham.jpeg
     # Configuración específica de Android
