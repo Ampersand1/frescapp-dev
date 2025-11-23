@@ -13,12 +13,14 @@ import 'package:url_launcher/url_launcher_string.dart';
 import 'package:http/http.dart' as http;
 import 'package:frescapp/api_routes.dart';
 import 'package:frescapp/screens/login_screen.dart';
+import 'package:frescapp/screens/discounts/descuentos_page.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final List<Product> productsInCart;
   final Order order;
 
-  const OrderDetailScreen({super.key, required this.productsInCart,required  this.order});
+  const OrderDetailScreen(
+      {super.key, required this.productsInCart, required this.order});
 
   @override
   // ignore: library_private_types_in_public_api
@@ -33,6 +35,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   late List<String> paymentMethods = [];
   late List<String> deliverySlots = [];
   final OrderService orderService = OrderService();
+
   @override
   void initState() {
     super.initState();
@@ -41,14 +44,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     selectedPaymentMethod = 'Método de pago';
     getOrderDetailsFromSharedPreferences();
     _checkTokenValidity();
-
   }
+
+  // --- LOGICA DE DESCUENTOS (Misma que en CartScreen) ---
+  double _getProductDiscount(Product product) {
+    if (product.name != null) {
+      if (product.name!.length % 3 == 0) return 0.20; // 20%
+      if (product.name!.length % 5 == 0) return 0.10; // 10%
+    }
+    return 0.0;
+  }
+
+  double _calculateDiscountedPrice(
+      double originalPrice, double discountPercent) {
+    return originalPrice * (1 - discountPercent);
+  }
+  // -----------------------------------------------------
 
   void getOrderDetailsFromSharedPreferences() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       setState(() {
-        // Actualiza las listas después de obtener las preferencias compartidas
         deliverySlots = prefs.getStringList('delivery_slots') ?? [];
         paymentMethods = prefs.getStringList('payments_method') ?? [];
       });
@@ -67,15 +83,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       String phone = prefs.getString('user_phone') ?? '';
       String contactPhone = prefs.getString('contact_phone') ?? '';
 
-      String message = 'Hola, soy $name y mis datos son:\nEmail: $email\nTeléfono: $phone. Tengo la siguiente duda.';
+      String message =
+          'Hola, soy $name y mis datos son:\nEmail: $email\nTeléfono: $phone. Tengo la siguiente duda.';
 
-      // Codificar el mensaje para que se pueda enviar correctamente en la URL
       String encodedMessage = Uri.encodeComponent(message);
-
-      // Construir la URL para abrir WhatsApp con el mensaje predefinido
       String url = 'whatsapp://send?phone=$contactPhone&text=$encodedMessage';
 
-      // Lanzar la URL para abrir WhatsApp
       await launchUrlString(url);
     } catch (error) {
       if (kDebugMode) {
@@ -90,32 +103,47 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-Future<void> _checkTokenValidity() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('token');
-  
-  if (token != null) {
-    final response = await http.post(
-      Uri.parse('${ApiRoutes.baseUrl}${ApiRoutes.user}/check_token'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Authorization': 'Bearer $token',
-      },
-    );
+  Future<void> _checkTokenValidity() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
 
-    setState(() {
-      _userActive = response.statusCode == 200;
-    });
-  } else {
-    setState(() {
-      _userActive = false;
-    });
+    if (token != null) {
+      final response = await http.post(
+        Uri.parse('${ApiRoutes.baseUrl}${ApiRoutes.user}/check_token'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      setState(() {
+        _userActive = response.statusCode == 200;
+      });
+    } else {
+      setState(() {
+        _userActive = false;
+      });
+    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
-    double total = widget.productsInCart.fold(
-        0, (sum, product) => sum + ((product.priceSale ?? 0) * (product.quantity ?? 0)));
+    // CÁLCULO DE TOTALES Y AHORROS
+    double finalTotal = 0;
+    double totalSavings = 0;
+
+    for (var product in widget.productsInCart) {
+      double originalPrice = (product.priceSale ?? 0).toDouble();
+      double discountPercent = _getProductDiscount(product);
+      double priceToUse = originalPrice;
+
+      if (discountPercent > 0) {
+        priceToUse = _calculateDiscountedPrice(originalPrice, discountPercent);
+        totalSavings += (originalPrice - priceToUse) * (product.quantity ?? 0);
+      }
+      finalTotal += priceToUse * (product.quantity ?? 0);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalle del Pedido'),
@@ -126,11 +154,25 @@ Future<void> _checkTokenValidity() async {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // TOTAL A PAGAR
               Text(
-                'Total: \$ ${NumberFormat('#,###').format(total)}',
+                'Total: \$ ${NumberFormat('#,###').format(finalTotal)}',
                 style:
                     const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
+              
+              // VISUALIZACIÓN DEL AHORRO
+              if (totalSavings > 0) ...[
+                const SizedBox(height: 5),
+                Text(
+                  'Ahorraste: \$ ${NumberFormat('#,###').format(totalSavings)}',
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green),
+                ),
+              ],
+
               const SizedBox(height: 16),
               const Text(
                 'Fecha de Entrega:',
@@ -191,7 +233,8 @@ Future<void> _checkTokenValidity() async {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  _confirmOrder(context);
+                  // Pasamos los totales calculados para no recalcular todo de cero
+                  _confirmOrder(context, finalTotal, totalSavings);
                 },
                 child: const Text('Confirmar Pedido'),
               ),
@@ -204,6 +247,7 @@ Future<void> _checkTokenValidity() async {
           currentIndex: 0,
           selectedItemColor: Colors.lightGreen.shade900,
           unselectedItemColor: Colors.grey,
+          type: BottomNavigationBarType.fixed,
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.home),
@@ -225,12 +269,15 @@ Future<void> _checkTokenValidity() async {
                 label: 'Perfil',
               ),
             const BottomNavigationBarItem(
+              icon: Icon(Icons.local_offer),
+              label: 'Descuentos',
+            ),
+            const BottomNavigationBarItem(
               icon: Icon(Icons.message_rounded),
               label: 'WhatsApp',
             ),
           ],
           onTap: (int index) {
-            // Lista de funciones para cada botón
             final actions = [
               () => Navigator.push(
                     context,
@@ -256,10 +303,14 @@ Future<void> _checkTokenValidity() async {
                           builder: (context) =>
                               ProfileScreen(order: widget.order)),
                     ),
+              () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const DescuentosPage()),
+                  ),
               () => _openWhatsApp(context),
             ];
 
-            // Ejecutar la acción correspondiente si existe
             if (index < actions.length) {
               actions[index]();
             }
@@ -275,13 +326,9 @@ Future<void> _checkTokenValidity() async {
     final DateTime lastDate = DateTime(now.year, now.month, now.day + 7);
 
     if (now.weekday == DateTime.friday && now.hour >= 18) {
-      // Es viernes después de las 6 p.m.
-      primer = DateTime(now.year, now.month,
-          now.day + 3); // Primer día disponible es el lunes
+      primer = DateTime(now.year, now.month, now.day + 3);
     } else {
-      // Otro día de la semana o viernes antes de las 6 p.m.
-      primer = DateTime(now.year, now.month,
-          now.day + 1); // El primer día disponible es el siguiente
+      primer = DateTime(now.year, now.month, now.day + 1);
     }
 
     final DateTime? picked = await showDatePicker(
@@ -299,38 +346,40 @@ Future<void> _checkTokenValidity() async {
   }
 
   bool _isSelectableDate(DateTime day) {
-    // Evitar seleccionar domingos
     if (day.weekday == DateTime.sunday) {
       return false;
     }
     return true;
   }
 
-  void _confirmOrder(BuildContext context) {
-    // Verificar que se hayan seleccionado la fecha de entrega, el horario de entrega y el medio de pago
-    if (selectedDeliverySlot == 'Horario de entrega' || selectedPaymentMethod == 'Método de pago') {
-      // Mostrar un mensaje de advertencia si no se han seleccionado todos los campos
+  void _confirmOrder(BuildContext context, double calculatedTotal, double calculatedSavings) {
+    if (selectedDeliverySlot == 'Horario de entrega' ||
+        selectedPaymentMethod == 'Método de pago') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor, seleccione fecha, horario de entrega y medio de pago.'),
+          content: Text(
+              'Por favor, seleccione fecha, horario de entrega y medio de pago.'),
         ),
       );
-      return; // Salir del método sin continuar con la confirmación del pedido
+      return;
     }
+
     widget.order.products = widget.productsInCart;
-    widget.order.discount = 0;
-    widget.order.total = widget.productsInCart.fold(
-          0.0, (sum, product) => sum! + ((product.priceSale ?? 0) * (product.quantity ?? 0)));
+    // Aquí guardamos el ahorro calculado
+    widget.order.discount = calculatedSavings; 
+    // Aquí guardamos el total real a pagar (ya con descuento)
+    widget.order.total = calculatedTotal;
+    
     widget.order.deliverySlot = selectedDeliverySlot!;
     widget.order.paymentMethod = selectedPaymentMethod!;
     widget.order.deliveryDate = DateFormat('yyyy-MM-dd').format(selectedDate);
-    // Enviar el objeto Order al servicio
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                OrderConfirmationScreen(orderDetails: widget.order)),
-      ).catchError((error) {
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (context) =>
+              OrderConfirmationScreen(orderDetails: widget.order)),
+    ).catchError((error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al confirmar el pedido: $error'),

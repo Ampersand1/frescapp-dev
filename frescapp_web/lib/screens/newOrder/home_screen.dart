@@ -16,7 +16,6 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:frescapp/screens/discounts/descuentos_page.dart';
 
-
 // ignore: must_be_immutable
 class HomeScreen extends StatefulWidget {
   final Order? order;
@@ -37,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late num productCounter = 0;
   late Order order;
   ConfigService configService = ConfigService(http.Client());
+
   @override
   void initState() {
     super.initState();
@@ -73,9 +73,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> getInitialProducts() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Obtiene el correo electrónico del usuario, o asigna 'undefined' si no existe
     final String userEmail = prefs.getString('user_email') ?? 'undefined';
-    // Llama al servicio de productos con el correo obtenido
+
     allProducts = await productService.getProducts(userEmail);
 
     setState(() {
@@ -84,6 +83,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     loadOrder(widget.order ?? Order());
   }
+
+  // --- LÓGICA DE DESCUENTOS SIMULADA (Misma que en DescuentosPage) ---
+  double _getProductDiscount(Product product) {
+    if (product.name != null) {
+      if (product.name!.length % 3 == 0) return 0.20; 
+      if (product.name!.length % 5 == 0) return 0.10; 
+    }
+    return 0.0;
+  }
+
+  double _calculateDiscountedPrice(double originalPrice, double discountPercent) {
+    return originalPrice * (1 - discountPercent);
+  }
+  // -------------------------------------
 
   void filterProducts(String query) {
     final normalizedQuery = removeDiacritics(query.toLowerCase());
@@ -141,7 +154,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadOrder(Order order) async {
-    if (widget.order == null) {
+    // Si widget.order viene lleno (por ejemplo, al volver de Descuentos), usamos eso
+    if (widget.order != null && (widget.order?.products?.isNotEmpty ?? false)) {
+       // Sincronizar la lista local de productos (allProducts) con las cantidades de la orden
+       for (var product in allProducts) {
+        var matchingProduct = widget.order!.products!.firstWhere(
+          (orderProduct) => orderProduct.sku == product.sku,
+          orElse: () => Product(sku: "dummy"), 
+        );
+        if (matchingProduct.sku != "dummy") {
+          product.quantity = matchingProduct.quantity;
+        } else {
+          product.quantity = 0;
+        }
+      }
+      productsInCart = widget.order!.products!;
+    } 
+    // Lógica original de carga de usuario...
+    else if (widget.order == null) {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       if (prefs.getString('user_id') != null) {
         final customerId = prefs.getString('user_id') ?? '';
@@ -161,32 +191,15 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       }
-    } else {
-      for (var product in allProducts) {
-        var matchingProduct = order.products!.firstWhere(
-          (orderProduct) => orderProduct.sku == product.sku,
-          orElse: () => Product(
-              sku: product.sku,
-              name: product.name,
-              category: product.category,
-              quantity: 0,
-              priceSale: product.priceSale,
-              image: product.image),
-        );
-        if (matchingProduct.quantity != null) {
-          product.quantity = matchingProduct.quantity;
-        }
-      }
+    } 
 
-      setState(() {
-        productsInCart = order.products!;
-        productCounter =
-            productsInCart.fold(0, (sum, item) => sum + (item.quantity as int));
-        userAddress = order.deliveryAddress ?? '';
-        name = order.customerName ?? 'Frescapp';
-        displayedProducts = allProducts.toList();
-      });
-    }
+    setState(() {
+      // Actualizar contador
+      productCounter = productsInCart.fold(0, (sum, item) => sum + (item.quantity ?? 0));
+      userAddress = order.deliveryAddress ?? '';
+      name = order.customerName ?? 'Frescapp';
+      displayedProducts = allProducts.toList();
+    });
   }
 
   void _openWhatsApp(BuildContext context) async {
@@ -207,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (kDebugMode) {
         print('Error opening WhatsApp: $error');
       }
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error al abrir WhatsApp.'),
@@ -219,12 +231,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkTokenValidity() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    // Verifica si hay un token y devuelve true si es válido, de lo contrario, devuelve false
+
     if (token != null) {
       final response = await http.post(
-        Uri.parse(
-            '${ApiRoutes.baseUrl}${ApiRoutes.user}/check_token'), // Endpoint para verificar el token
-
+        Uri.parse('${ApiRoutes.baseUrl}${ApiRoutes.user}/check_token'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token'
@@ -240,6 +250,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Función auxiliar para preparar la orden antes de navegar
+  void _prepareOrderForNavigation() {
+    widget.order?.products = productsInCart;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -249,16 +264,22 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.shopping_cart),
             onPressed: () {
+              // Sincronizamos antes de ir al carrito
+              _prepareOrderForNavigation();
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => CartScreen(
                     productsInCart: productsInCart,
                     updateCounter: updateCounter,
-                    order: order,
+                    order: widget.order ?? Order(),
                   ),
                 ),
-              );
+              ).then((_) {
+                 setState(() {
+                   productCounter = productsInCart.fold(0, (sum, item) => sum + (item.quantity ?? 0));
+                 });
+              });
             },
           ),
         ],
@@ -283,10 +304,51 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemCount: displayedProducts.length,
                 itemBuilder: (context, index) {
                   Product product = displayedProducts[index];
+                  
+                  double discountPercent = _getProductDiscount(product);
+                  bool hasDiscount = discountPercent > 0;
+                  double originalPrice = (product.priceSale as num).toDouble();
+                  double finalPrice = hasDiscount 
+                      ? _calculateDiscountedPrice(originalPrice, discountPercent) 
+                      : originalPrice;
+
                   return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      backgroundImage: NetworkImage(product.image as String),
+                    leading: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.white,
+                          backgroundImage: NetworkImage(product.image as String),
+                        ),
+                        if (hasDiscount)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.yellow,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 2,
+                                    offset: Offset(1, 1),
+                                  )
+                                ]
+                              ),
+                              child: Text(
+                                '-${(discountPercent * 100).toInt()}%',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     title: RichText(
                       text: TextSpan(
@@ -298,14 +360,32 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Colors.black,
                             ),
                           ),
-                          TextSpan(
-                            text:
-                                '\n \$ ${NumberFormat('#,###').format(product.priceSale)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                          if (hasDiscount) ...[
+                             TextSpan(
+                              text: '\n\$ ${NumberFormat('#,###').format(originalPrice)} ',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                decoration: TextDecoration.lineThrough,
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
+                            TextSpan(
+                              text: '\$ ${NumberFormat('#,###').format(finalPrice)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ] else 
+                            TextSpan(
+                              text: '\n\$ ${NumberFormat('#,###').format(originalPrice)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -321,17 +401,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                           style: ElevatedButton.styleFrom(
                             shape: const CircleBorder(),
-                            padding: const EdgeInsets.all(
-                                5), // Reduce el espacio interno
-                            backgroundColor: const Color.fromARGB(221, 223, 98, 89),
-                            minimumSize:
-                                const Size(30, 30), // Tamaño mínimo del botón
-                            maximumSize:
-                                const Size(30, 30), // Tamaño máximo del botón
+                            padding: const EdgeInsets.all(5),
+                            backgroundColor:
+                                const Color.fromARGB(221, 223, 98, 89),
+                            minimumSize: const Size(30, 30),
+                            maximumSize: const Size(30, 30),
                           ),
                           child: const Icon(Icons.remove,
-                              color: Colors.white,
-                              size: 16), // Ícono más pequeño
+                              color: Colors.white, size: 16),
                         ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -339,8 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             product.quantity.toString(),
                             style: const TextStyle(
                                 fontSize: 16,
-                                fontWeight: FontWeight
-                                    .bold), // Ajusta el tamaño del texto
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                         ElevatedButton(
@@ -351,17 +427,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                           style: ElevatedButton.styleFrom(
                             shape: const CircleBorder(),
-                            padding: const EdgeInsets.all(
-                                5), // Reduce el espacio interno
-                            backgroundColor: const Color.fromARGB(255, 97, 143, 99),
-                            minimumSize:
-                                const Size(30, 30), // Tamaño mínimo del botón
-                            maximumSize:
-                                const Size(30, 30), // Tamaño máximo del botón
+                            padding: const EdgeInsets.all(5),
+                            backgroundColor:
+                                const Color.fromARGB(255, 97, 143, 99),
+                            minimumSize: const Size(30, 30),
+                            maximumSize: const Size(30, 30),
                           ),
                           child: const Icon(Icons.add,
-                              color: Colors.white,
-                              size: 16), // Ícono más pequeño
+                              color: Colors.white, size: 16),
                         ),
                       ],
                     ),
@@ -370,8 +443,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         context: context,
                         builder: (context) {
                           return StatefulBuilder(
-                            builder:
-                                (BuildContext context, StateSetter setState) {
+                            builder: (BuildContext context,
+                                StateSetter setState) {
                               return AlertDialog(
                                 title: Text(product.name as String,
                                     style: const TextStyle(
@@ -381,81 +454,139 @@ class _HomeScreenState extends State<HomeScreen> {
                                 content: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Image.network(
-                                      product.image as String,
-                                      height: 200,
-                                      width: 200,
+                                    Stack(
+                                      clipBehavior: Clip.none,
+                                      alignment: Alignment.topRight,
+                                      children: [
+                                        Image.network(
+                                          product.image as String,
+                                          height: 200,
+                                          width: 200,
+                                        ),
+                                        if (hasDiscount)
+                                          Positioned(
+                                            right: 10,
+                                            top: 10,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: const BoxDecoration(
+                                                color: Colors.yellow,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Text(
+                                                '-${(discountPercent * 100).toInt()}%',
+                                                style: const TextStyle(
+                                                  color: Colors.black,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                     const SizedBox(height: 20),
                                     Text(product.name as String,
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold),
                                         textAlign: TextAlign.center),
-                                    Text(
-                                      ' \$  ${NumberFormat('#,###').format(product.priceSale)}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                      textAlign: TextAlign.center,
-                                    ),
+                                    
+                                    if (hasDiscount)
+                                      Column(
+                                        children: [
+                                          Text(
+                                            '\$ ${NumberFormat('#,###').format(originalPrice)}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey,
+                                              decoration: TextDecoration.lineThrough,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          Text(
+                                            '\$ ${NumberFormat('#,###').format(finalPrice)}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                              fontSize: 18,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      )
+                                    else
+                                      Text(
+                                        ' \$  ${NumberFormat('#,###').format(product.priceSale)}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center),
+                                    
                                     Text(product.category as String,
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold),
                                         textAlign: TextAlign.center),
                                     Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              decreaseQuantity(product);
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            shape: const CircleBorder(),
-                            padding: const EdgeInsets.all(
-                                5), // Reduce el espacio interno
-                            backgroundColor: const Color.fromARGB(221, 223, 98, 89),
-                            minimumSize:
-                                const Size(30, 30), // Tamaño mínimo del botón
-                            maximumSize:
-                                const Size(30, 30), // Tamaño máximo del botón
-                          ),
-                          child: const Icon(Icons.remove,
-                              color: Colors.white,
-                              size: 16), // Ícono más pequeño
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text(
-                            product.quantity.toString(),
-                            style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight
-                                    .bold), // Ajusta el tamaño del texto
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              increaseQuantity(product);
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            shape: const CircleBorder(),
-                            padding: const EdgeInsets.all(
-                                5), // Reduce el espacio interno
-                            backgroundColor: const Color.fromARGB(255, 97, 143, 99),
-                            minimumSize:
-                                const Size(30, 30), // Tamaño mínimo del botón
-                            maximumSize:
-                                const Size(30, 30), // Tamaño máximo del botón
-                          ),
-                          child: const Icon(Icons.add,
-                              color: Colors.white,
-                              size: 16), // Ícono más pequeño
-                        ),
-                      ],
-                    ),
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              decreaseQuantity(product);
+                                            });
+                                          },
+                                          style:
+                                              ElevatedButton.styleFrom(
+                                            shape: const CircleBorder(),
+                                            padding:
+                                                const EdgeInsets.all(5),
+                                            backgroundColor:
+                                                const Color.fromARGB(
+                                                    221, 223, 98, 89),
+                                            minimumSize:
+                                                const Size(30, 30),
+                                            maximumSize:
+                                                const Size(30, 30),
+                                          ),
+                                          child: const Icon(Icons.remove,
+                                              color: Colors.white,
+                                              size: 16),
+                                        ),
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 8.0),
+                                          child: Text(
+                                            product.quantity.toString(),
+                                            style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight:
+                                                    FontWeight.bold),
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              increaseQuantity(product);
+                                            });
+                                          },
+                                          style:
+                                              ElevatedButton.styleFrom(
+                                            shape: const CircleBorder(),
+                                            padding:
+                                                const EdgeInsets.all(5),
+                                            backgroundColor:
+                                                const Color.fromARGB(
+                                                    255, 97, 143, 99),
+                                            minimumSize:
+                                                const Size(30, 30),
+                                            maximumSize:
+                                                const Size(30, 30),
+                                          ),
+                                          child: const Icon(Icons.add,
+                                              color: Colors.white,
+                                              size: 16),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                                 actions: [
@@ -484,6 +615,7 @@ class _HomeScreenState extends State<HomeScreen> {
           currentIndex: 0,
           selectedItemColor: Colors.lightGreen.shade900,
           unselectedItemColor: Colors.grey,
+          type: BottomNavigationBarType.fixed, // Asegura que se vean todos los labels
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.home),
@@ -503,53 +635,51 @@ class _HomeScreenState extends State<HomeScreen> {
               const BottomNavigationBarItem(
                 icon: Icon(Icons.person),
                 label: 'Perfil',
-                ),
+              ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.local_offer),
-              label: 'Oferta',
-            ),   
+              label: 'Descuentos', 
+            ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.message_rounded),
               label: 'WhatsApp',
             ),
           ],
           onTap: (int index) {
-            // Lista de funciones para cada botón
-            final actions = [
-              () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => HomeScreen(order: widget.order)),
-                  ),
-              if (_userActive)
-                () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              OrdersScreen(order: widget.order)),
-                    ),
-              if (!_userActive)
-                () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => LoginScreen()),
-                    ),
-              if (_userActive)
-                () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              ProfileScreen(order: widget.order)),
-                    ), 
-                () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const DescuentosPage(),)
-                    ),                    
-              () => _openWhatsApp(context),
-            ];
+            
+            // IMPORTANTE: Sincronizar el estado del carrito antes de salir del Home
+            _prepareOrderForNavigation();
 
-            // Ejecutar la acción correspondiente si existe
-            if (index < actions.length) {
-              actions[index]();
+            List<VoidCallback> activeActions = [];
+            
+            // 1. Inicio (Recargar Home)
+            activeActions.add(() => Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => HomeScreen(order: widget.order))));
+            
+            // 2. Pedidos (si activo)
+            if (_userActive) {
+              activeActions.add(() => Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (context) => OrdersScreen(order: widget.order))));
+            }
+            
+            // 3. Login (si inactivo) o Perfil (si activo)
+            if (!_userActive) {
+              activeActions.add(() => Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (context) => LoginScreen())));
+            } else {
+              activeActions.add(() => Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (context) => ProfileScreen(order: widget.order))));
+            }
+            
+            // 4. Descuentos (AQUI ESTABA EL ERROR, AHORA SE PASA EL ORDER)
+            activeActions.add(() => Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => DescuentosPage(order: widget.order))));
+            
+            // 5. WhatsApp
+            activeActions.add(() => _openWhatsApp(context));
+
+            if (index < activeActions.length) {
+              activeActions[index]();
             }
           },
         ),

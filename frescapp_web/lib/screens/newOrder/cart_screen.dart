@@ -12,6 +12,7 @@ import 'package:frescapp/models/order.dart' as orden;
 import 'package:frescapp/api_routes.dart';
 import 'package:http/http.dart' as http;
 import 'package:frescapp/screens/login_screen.dart';
+import 'package:frescapp/screens/discounts/descuentos_page.dart';
 
 class CartScreen extends StatefulWidget {
   final List<Product> productsInCart;
@@ -30,12 +31,28 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   late bool _userActive = false;
+
   @override
   void initState() {
     _checkTokenValidity();
-
     super.initState();
   }
+
+  // --- LOGICA DE DESCUENTOS ---
+  double _getProductDiscount(Product product) {
+    if (product.name != null) {
+      // Simulación de descuentos variados
+      if (product.name!.length % 3 == 0) return 0.20; // 20%
+      if (product.name!.length % 5 == 0) return 0.10; // 10%
+    }
+    return 0.0;
+  }
+
+  double _calculateDiscountedPrice(
+      double originalPrice, double discountPercent) {
+    return originalPrice * (1 - discountPercent);
+  }
+  // ---------------------------
 
   void _openWhatsApp(BuildContext context) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -48,19 +65,14 @@ class _CartScreenState extends State<CartScreen> {
       String message =
           'Hola, soy $name y mis datos son:\nEmail: $email\nTeléfono: $phone. Tengo la siguiente duda.';
 
-      // Codificar el mensaje para que se pueda enviar correctamente en la URL
       String encodedMessage = Uri.encodeComponent(message);
-
-      // Construir la URL para abrir WhatsApp con el mensaje predefinido
       String url = 'whatsapp://send?phone=$contactPhone&text=$encodedMessage';
 
-      // Lanzar la URL para abrir WhatsApp
       await launchUrlString(url);
     } catch (error) {
       if (kDebugMode) {
         print('Error opening WhatsApp: $error');
       }
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error al abrir WhatsApp.'),
@@ -94,19 +106,29 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Filtra los productos con una cantidad mayor a cero
     final List<Product> productsWithQuantity = widget.productsInCart
         .where((product) => product.quantity! > 0)
-        .cast<Product>()
         .toList();
 
-    // Calcula el total del pedido
     double total = 0;
+    double totalSavings = 0;
+
+    // Calcular totales considerando descuentos
     for (var product in productsWithQuantity) {
-      total += product.quantity! *
-          product
-              .priceSale!; // Multiplica la cantidad por el precio de venta y lo suma al total
+      double originalPrice = (product.priceSale ?? 0).toDouble();
+      double discountPercent = _getProductDiscount(product);
+      double finalPrice = originalPrice;
+
+      if (discountPercent > 0) {
+        finalPrice =
+            _calculateDiscountedPrice(originalPrice, discountPercent);
+        totalSavings +=
+            (originalPrice - finalPrice) * (product.quantity ?? 0);
+      }
+
+      total += finalPrice * (product.quantity ?? 0);
     }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tu Pedido'),
@@ -116,37 +138,104 @@ class _CartScreenState extends State<CartScreen> {
           children: [
             ListView.builder(
               shrinkWrap: true,
-              physics:
-                  const NeverScrollableScrollPhysics(), // Para evitar que el ListView ocupe todo el espacio disponible
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: productsWithQuantity.length,
               itemBuilder: (context, index) {
                 final Product product = productsWithQuantity[index];
+
+                // Variables locales para renderizado
+                double originalPrice = (product.priceSale ?? 0).toDouble();
+                double discountPercent = _getProductDiscount(product);
+                bool hasDiscount = discountPercent > 0;
+                double finalPrice = hasDiscount
+                    ? _calculateDiscountedPrice(originalPrice, discountPercent)
+                    : originalPrice;
+                double subTotal = finalPrice * (product.quantity ?? 0);
+
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    backgroundImage: NetworkImage(
-                        product.image ?? ''), // Ejemplo: imagen del producto
+                  leading: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.white,
+                        backgroundImage: NetworkImage(product.image ?? ''),
+                      ),
+                      if (hasDiscount)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                                color: Colors.yellow,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 2,
+                                    offset: Offset(1, 1),
+                                  )
+                                ]),
+                            child: Text(
+                              '-${(discountPercent * 100).toInt()}%',
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   title: RichText(
                     text: TextSpan(
                       children: [
                         TextSpan(
-                            text: '${product.name ?? ''} - ',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.normal,
-                                color: Colors.black)),
-                        TextSpan(
+                          text: '${product.name ?? ''} - ',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.normal,
+                            color: Colors.black,
+                          ),
+                        ),
+                        // Lógica visual de precios
+                        if (hasDiscount) ...[
+                          TextSpan(
                             text:
-                                '\nPrecio \$ ${NumberFormat('#,###').format(product.priceSale ?? 0)}',
+                                '\nPrecio \$ ${NumberFormat('#,###').format(originalPrice)} ',
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black)),
-                        TextSpan(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough,
+                              fontSize: 12,
+                            ),
+                          ),
+                          TextSpan(
                             text:
-                                '\nSubtotal \$ ${NumberFormat('#,###').format((product.priceSale ?? 0) * (product.quantity ?? 0))}',
+                                '\$ ${NumberFormat('#,###').format(finalPrice)}',
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black))
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ] else ...[
+                          TextSpan(
+                            text:
+                                '\nPrecio \$ ${NumberFormat('#,###').format(originalPrice)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                        TextSpan(
+                          text:
+                              '\nSubtotal \$ ${NumberFormat('#,###').format(subTotal)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -159,35 +248,67 @@ class _CartScreenState extends State<CartScreen> {
                           builder:
                               (BuildContext context, StateSetter setState) {
                             return AlertDialog(
-                              title: Text(product.name as String,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18),
-                                  textAlign: TextAlign.center),
+                              title: Text(
+                                product.name ?? "",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                               content: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Image.network(
-                                    product.image as String,
+                                    product.image ?? '',
                                     height: 200,
                                     width: 200,
                                   ),
                                   const SizedBox(height: 20),
-                                  Text(product.name as String,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                      textAlign: TextAlign.center),
                                   Text(
-                                    ' \$  ${NumberFormat('#,###').format(product.priceSale)}',
+                                    product.name ?? "",
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
-                                  Text(product.category as String,
+                                  if (hasDiscount)
+                                    Column(
+                                      children: [
+                                        Text(
+                                          '\$ ${NumberFormat('#,###').format(originalPrice)}',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey,
+                                              decoration:
+                                                  TextDecoration.lineThrough),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        Text(
+                                          '\$ ${NumberFormat('#,###').format(finalPrice)}',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                              fontSize: 16),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    )
+                                  else
+                                    Text(
+                                      ' \$  ${NumberFormat('#,###').format(originalPrice)}',
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                      textAlign: TextAlign.center),
-                                  // Agregar más atributos aquí según sea necesario
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  Text(
+                                    product.category ?? "",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ],
                               ),
                               actions: [
@@ -212,20 +333,17 @@ class _CartScreenState extends State<CartScreen> {
                         onPressed: () {
                           setState(() {
                             if (product.quantity! > 0) {
-                              product.quantity = product.quantity! -
-                                  1; // Disminuye la cantidad del producto
+                              product.quantity = product.quantity! - 1;
                             }
                           });
                         },
                       ),
-                      Text(product.quantity
-                          .toString()), // Muestra la cantidad del producto
+                      Text(product.quantity.toString()),
                       IconButton(
                         icon: const Icon(Icons.add),
                         onPressed: () {
                           setState(() {
-                            product.quantity = product.quantity! +
-                                1; // Aumenta la cantidad del producto
+                            product.quantity = product.quantity! + 1;
                           });
                         },
                       ),
@@ -234,28 +352,42 @@ class _CartScreenState extends State<CartScreen> {
                 );
               },
             ),
-            // Muestra el total del pedido
+
+            const SizedBox(height: 10),
+
+            // 1. TOTAL
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0, bottom: 5.0),
               child: Text(
                 'Total: \$ ${NumberFormat('#,###').format(total)}',
                 style:
                     const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
-            if (total < 100000)
-              const Padding(
-                padding: EdgeInsets.only(top: 8.0),
+
+            // 2. AHORRO (CON TEXTO "Ahorraste: $...")
+            if (totalSavings > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text(
-                  'El monto mínimo de la orden debe ser 100,000',
-                  style: TextStyle(color: Colors.red, fontSize: 16),
-                  textAlign: TextAlign.center,
+                  'Ahorraste: \$ ${NumberFormat('#,###').format(totalSavings)}',
+                  style: const TextStyle(
+                      fontSize: 18, // Tamaño ligeramente más grande para resaltar
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green),
                 ),
               ),
-            // Botón para confirmar el pedido
+            
+            const SizedBox(height: 10),
+
+            // BOTÓN CONFIRMAR
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  // Esto asegura que el texto sea ROJO cuando el botón está deshabilitado (onPressed es null)
+                  disabledForegroundColor: Colors.red, 
+                ),
                 onPressed: total >= 100000
                     ? () {
                         Navigator.push(
@@ -268,17 +400,30 @@ class _CartScreenState extends State<CartScreen> {
                         );
                       }
                     : null,
-                child: const Text('Confirmar Pedido'),
+                child: Text(
+                  total >= 100000 
+                    ? 'Confirmar Pedido' 
+                    : 'Mínimo de compra \$ 100.000',
+                  // Si prefieres forzar el estilo del texto directamente:
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: total >= 100000 ? null : Colors.red, // Rojo explícito si no cumple
+                  ),
+                ),
               ),
             ),
           ],
         ),
       ),
+
+      // BOTTOM NAV
       bottomNavigationBar: SafeArea(
         child: BottomNavigationBar(
           currentIndex: 0,
           selectedItemColor: Colors.lightGreen.shade900,
           unselectedItemColor: Colors.grey,
+          type: BottomNavigationBarType.fixed, 
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.home),
@@ -299,44 +444,47 @@ class _CartScreenState extends State<CartScreen> {
                 icon: Icon(Icons.person),
                 label: 'Perfil',
               ),
+             const BottomNavigationBarItem(
+              icon: Icon(Icons.local_offer),
+              label: 'Descuentos',
+            ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.message_rounded),
               label: 'WhatsApp',
             ),
           ],
           onTap: (int index) {
-            // Lista de funciones para cada botón
-            final actions = [
-              () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => HomeScreen(order: widget.order)),
-                  ),
-              if (_userActive)
-                () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              OrdersScreen(order: widget.order)),
-                    ),
-              if (!_userActive)
-                () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => LoginScreen()),
-                    ),
-              if (_userActive)
-                () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              ProfileScreen(order: widget.order)),
-                    ),
-              () => _openWhatsApp(context),
-            ];
+            // Lista de acciones
+            List<VoidCallback> activeActions = [];
+            
+            // 0. Inicio
+            activeActions.add(() => Navigator.push(context,
+                MaterialPageRoute(builder: (context) => HomeScreen(order: widget.order))));
+            
+            // 1. Pedidos (si activo)
+            if (_userActive) {
+              activeActions.add(() => Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => OrdersScreen(order: widget.order))));
+            }
+            
+            // 2. Login/Perfil
+            if (!_userActive) {
+              activeActions.add(() => Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => LoginScreen())));
+            } else {
+              activeActions.add(() => Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => ProfileScreen(order: widget.order))));
+            }
+            
+            // 3. Descuentos
+            activeActions.add(() => Navigator.push(context,
+                MaterialPageRoute(builder: (context) => const DescuentosPage())));
+            
+            // 4. WhatsApp
+            activeActions.add(() => _openWhatsApp(context));
 
-            // Ejecutar la acción correspondiente si existe
-            if (index < actions.length) {
-              actions[index]();
+            if (index < activeActions.length) {
+              activeActions[index]();
             }
           },
         ),
