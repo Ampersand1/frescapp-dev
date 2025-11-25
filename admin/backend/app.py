@@ -52,6 +52,7 @@ from .api.inventory_management import inventory_api
 from .api.analytics_management import analytics_api
 from .api.cierre_management import cierres_api
 from .api.strikes_management import strike_api
+from .api.product_discount_management import product_discount_api
 
 # Registro de rutas
 app.register_blueprint(order_api, url_prefix='/api/order')
@@ -74,7 +75,7 @@ app.register_blueprint(inventory_api, url_prefix='/api/inventory')
 app.register_blueprint(analytics_api, url_prefix='/api/analytics')
 app.register_blueprint(cierres_api, url_prefix='/api/cierres')
 app.register_blueprint(strike_api, url_prefix='/api/strikes')
-
+app.register_blueprint(product_discount_api, url_prefix="/api/product_discount")
 # ---------------------------
 # Ruta raíz (para ver si el backend está vivo)
 # ---------------------------

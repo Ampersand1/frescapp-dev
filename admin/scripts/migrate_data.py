@@ -1,15 +1,10 @@
-"""
-Script seguro para migrar datos entre la base de producción y la de pruebas (admon28)
-Autor: ChatGPT x Esposa Mía 💕
-"""
-
 from pymongo import MongoClient, errors
 import os
 from pprint import pprint
 
 # === CONFIGURACIÓN ===
-PROD_URI = os.getenv("MONGO_URI_PROD", "mongodb://admin:Caremonda@app.buyfrescapp.com:27017/frescapp")
-DEV_URI = os.getenv("MONGO_URI", "mongodb+srv://admon28vrv:vrv1928CLUSpas@cluster-1.j6mqxz0.mongodb.net/admon28?retryWrites=true&w=majority")
+PROD_URI = os.getenv("MONGO_URI_PROD")
+DEV_URI = os.getenv("MONGO_URI")
 
 PROD_DB_NAME = "frescapp"
 DEV_DB_NAME = "admon28"
