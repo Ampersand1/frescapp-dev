@@ -2,32 +2,25 @@ from flask import Flask, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
-from .db import init_db
-from flask_pymongo import PyMongo
+
 # ---------------------------
 # Cargar variables de entorno
 # ---------------------------
 load_dotenv()
 
-def init_db(app):
-    uri = os.getenv("MONGO_URI")  # por defecto, desarrollo
-    if not uri:
-        raise ValueError("MONGO_URI no está configurada en el archivo .env")
-    app.config["MONGO_URI"] = uri
-    mongo = PyMongo(app)
-    return mongo
 # ---------------------------
 # Inicializar aplicación Flask
 # ---------------------------
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "clave_por_defecto")
-app.config["MONGO_URI"] = os.getenv("MONGO_URI")
-# ---------------------------
-# Inicializar conexión con MongoDB
-# ---------------------------
 
-mongo = init_db(app)
-db = mongo.db  
+# ---------------------------
+# Inicializar conexión con MongoDB desde db.py
+# ---------------------------
+from .db import init_db, get_db
+
+init_db(app)      # usa MONGO_URI o MONGO_URI_PROD según FLASK_ENV
+db = get_db()
 
 # ---------------------------
 # Importar y registrar Blueprints
@@ -38,7 +31,6 @@ from .api.customer_management import customer_api
 from .api.user_management import user_api
 from .api.config_order import configOrder_api
 from .api.reports_management import report_api
-from .api.discount_management import discount_api
 from .api.alegra_management import alegra_api
 from .api.woo_management import woo_api
 from .api.purchase_management import purchase_api
@@ -53,6 +45,7 @@ from .api.analytics_management import analytics_api
 from .api.cierre_management import cierres_api
 from .api.strikes_management import strike_api
 from .api.product_discount_management import product_discount_api
+from .api.db_info import debug_db_api
 
 # Registro de rutas
 app.register_blueprint(order_api, url_prefix='/api/order')
@@ -62,7 +55,6 @@ app.register_blueprint(customer_api, url_prefix='/api/customer')
 app.register_blueprint(user_api, url_prefix='/api/user')
 app.register_blueprint(configOrder_api, url_prefix='/api/config')
 app.register_blueprint(report_api, url_prefix='/api/reports')
-app.register_blueprint(discount_api, url_prefix='/api/discount')
 app.register_blueprint(alegra_api, url_prefix='/api/alegra')
 app.register_blueprint(woo_api, url_prefix='/api/woo')
 app.register_blueprint(purchase_api, url_prefix='/api/purchase')
@@ -76,8 +68,10 @@ app.register_blueprint(analytics_api, url_prefix='/api/analytics')
 app.register_blueprint(cierres_api, url_prefix='/api/cierres')
 app.register_blueprint(strike_api, url_prefix='/api/strikes')
 app.register_blueprint(product_discount_api, url_prefix="/api/product_discount")
+app.register_blueprint(debug_db_api, url_prefix="/api/debug")
+
 # ---------------------------
-# Ruta raíz (para ver si el backend está vivo)
+# Ruta raíz
 # ---------------------------
 @app.route('/')
 def home():
@@ -85,6 +79,10 @@ def home():
         "status": "ok",
         "message": "Backend de Frescapp funcionando correctamente UwU"
     }
+
+# ---------------------------
+# Test conexión DB
+# ---------------------------
 @app.route("/api/test_db")
 def test_db():
     try:
@@ -94,13 +92,12 @@ def test_db():
         return {"status": "error", "message": str(e)}, 500
 
 # ---------------------------
-# Servir archivos estáticos (imágenes compartidas)
+# Servir imágenes estáticas
 # ---------------------------
 @app.route('/api/shared/<path:filename>')
 def serve_static(filename):
     """
-    Sirve imágenes de productos desde 'backend/shared/products'.
-    Si no existe, retorna 'sin_foto.png'.
+    Sirve imágenes de productos.
     """
     root_dir = os.path.dirname(os.getcwd())
     products_dir = os.path.join(root_dir, 'backend', 'shared', 'products')
