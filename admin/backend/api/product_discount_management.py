@@ -1,3 +1,4 @@
+# product_discount_api.py
 from flask import Blueprint, request, jsonify
 from bson import ObjectId
 from datetime import datetime
@@ -12,7 +13,6 @@ products_coll = db["products"]
 
 product_discount_api = Blueprint("product_discount_api", __name__)
 
-
 # ---------------------------
 # Helpers
 # ---------------------------
@@ -22,6 +22,7 @@ def serialize_discount(d):
     return {
         "id": str(d.get("_id")),
         "product_sku": d.get("product_sku"),
+        "category": d.get("category"),
         "discount_type": d.get("discount_type"),
         "value": d.get("value"),
         "active": bool(d.get("active", True)),
@@ -31,11 +32,9 @@ def serialize_discount(d):
         "updated_at": d.get("updated_at").isoformat() if d.get("updated_at") else None,
     }
 
-
 def parse_optional_date(value):
     if not value:
         return None
-    # Accept ISO strings, datetimes, or timestamp numbers
     if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
     if isinstance(value, datetime):
@@ -43,15 +42,13 @@ def parse_optional_date(value):
     try:
         return date_parser.isoparse(value)
     except Exception:
-        # fallback try common formats
         try:
             return datetime.strptime(value, "%Y-%m-%d")
         except Exception:
             return None
 
-
 def is_discount_active(d):
-    """Comprueba active flag y rango de fechas si aplica."""
+    """Comprueba flag active y rango de fechas si aplica."""
     if not d:
         return False
     if not d.get("active", True):
@@ -65,12 +62,10 @@ def is_discount_active(d):
         return False
     return True
 
-
 def compute_final_price(product_price, discount):
     """
-    Si discount tiene 'discount_type' == 'fixed' y 'value' -> final = value
-    Si 'percentage' -> final = product_price * (1 - value/100)
-    Si mixed -> if fixed present prefer fixed, else percentage
+    Devuelve (final_price, savings_pct)
+    savings_pct es porcentaje (por ejemplo 20.0 para 20%).
     """
     if discount is None:
         return product_price, 0.0
@@ -80,7 +75,10 @@ def compute_final_price(product_price, discount):
     if d_type == "fixed":
         try:
             final = float(val)
-            savings_pct = (1 - (final / float(product_price))) * 100 if product_price and product_price > 0 else 0
+            if product_price and product_price > 0:
+                savings_pct = (1 - (final / float(product_price))) * 100
+            else:
+                savings_pct = 0.0
             return round(final, 2), round(savings_pct, 2)
         except Exception:
             return product_price, 0.0
@@ -93,14 +91,12 @@ def compute_final_price(product_price, discount):
         except Exception:
             return product_price, 0.0
     else:
-        # fallback (if structure different)
         try:
             pct = float(val)
             final = float(product_price) * (1 - (pct / 100.0))
             return round(final, 2), round(pct, 2)
         except Exception:
             return product_price, 0.0
-
 
 def require_admin_identity():
     """
@@ -111,13 +107,62 @@ def require_admin_identity():
         user = get_jwt_identity() or {}
     except Exception:
         return False, "Invalid token or identity"
-    # Ajusta según cómo guardes rol en tu JWT (role / is_admin)
     if isinstance(user, dict):
         if user.get("role") == "admin" or user.get("is_admin") == True:
             return True, user
-    # si token existe pero no rol admin, denegar
     return False, "Unauthorized: admin role required"
 
+def _dates_overlap(a_start, a_end, b_start, b_end):
+    """
+    True si los rangos [a_start, a_end] y [b_start, b_end] se solapan.
+    None significa abierto (inicio sin límite o fin sin límite).
+    """
+    # Normalize: if none -> open interval extremes
+    # Overlap exists unless one ends before the other starts.
+    if a_end and b_start and a_end < b_start:
+        return False
+    if b_end and a_start and b_end < a_start:
+        return False
+    return True
+
+def _check_conflict(field_name, field_value, start_date, end_date, exclude_id=None):
+    """
+    Busca descuentos activos existentes para 'field_name' ('product_sku' or 'category')
+    que se solapen en fechas con el rango propuesto.
+    exclude_id: ObjectId string para ignorar en actualizacion.
+    Retorna True si hay conflicto (solapamiento).
+    """
+    query = {field_name: field_value, "active": True}
+    if exclude_id:
+        try:
+            query["_id"] = {"$ne": ObjectId(exclude_id)}
+        except Exception:
+            pass
+
+    candidates = list(product_discounts.find(query))
+    for c in candidates:
+        c_start = c.get("start_date")
+        c_end = c.get("end_date")
+        if _dates_overlap(c_start, c_end, start_date, end_date):
+            return True, c
+    return False, None
+
+def _find_applicable_discount_for_product(product_doc):
+    """
+    Devuelve el descuento aplicable al producto (prioridad SKU > category).
+    Si hay varios (no debería), se elige el más restrictivo por fecha/inserción (mejor matching).
+    """
+    sku = product_doc.get("sku")
+    category = product_doc.get("category")
+    # 1. buscar por SKU
+    d = product_discounts.find_one({"product_sku": sku, "active": True})
+    if d and is_discount_active(d):
+        return d, "sku"
+    # 2. fallback categoría
+    d = product_discounts.find_one({"category": category, "active": True})
+    if d and is_discount_active(d):
+        return d, "category"
+    return None, None
 
 # ---------------------------
 # Routes
@@ -132,66 +177,68 @@ def create_product_discount():
 
     data = request.get_json() or {}
     product_sku = data.get("product_sku")
-    discount_type = data.get("discount_type")  # 'percentage' or 'fixed'
+    discount_type = data.get("discount_type")
     value = data.get("value")
     active = data.get("active", True)
     start_date = parse_optional_date(data.get("start_date"))
     end_date = parse_optional_date(data.get("end_date"))
     discount_category = data.get("category")
 
-    # Validaciones 
+    # Required: either sku or category
     if not product_sku and not discount_category:
         return jsonify({"error": "Debe especificar product_sku o category"}), 400
-
     if product_sku and discount_category:
         return jsonify({"error": "No puede enviar product_sku y category al mismo tiempo"}), 400
 
-    # 2. Validar discount_type
-    if discount_type not in ["percentage", "fixed"]:
+    # discount_type validation
+    if discount_type not in ("percentage", "fixed"):
         return jsonify({"error": "discount_type debe ser 'percentage' o 'fixed'"}), 400
 
-    # 3. Validar value numérico y positivo
+    # value numeric and positive & bounds for percentage
     try:
         value = float(value)
-        if value <= 0:
-            raise Exception()
-    except:
-        return jsonify({"error": "value debe ser un número positivo"}), 400
+    except Exception:
+        return jsonify({"error": "value debe ser numérico"}), 400
+    if value <= 0:
+        return jsonify({"error": "value debe ser mayor a 0"}), 400
+    if discount_type == "percentage" and (value < 0 or value > 100):
+        return jsonify({"error": "percentage debe estar entre 0 y 100"}), 400
 
-    # 4. Validar SKU existente
+    # Validate existence of referenced product/category
+    prod = None
     if product_sku:
         prod = products_coll.find_one({"sku": product_sku})
         if not prod:
             return jsonify({"error": "El SKU no existe en productos"}), 404
-
-    # 5. Validar categoría existente
     if discount_category:
         exists = products_coll.find_one({"category": discount_category})
         if not exists:
             return jsonify({"error": "La categoría no existe en productos"}), 404
 
-    # 6. Validar fechas
-    start_date_str = data.get("start_date")
-    end_date_str = data.get("end_date")
+    # Validate date logic (start <= end)
+    if start_date and end_date and start_date > end_date:
+        return jsonify({"error": "start_date no puede ser mayor que end_date"}), 400
 
-    start_date = None
-    end_date = None
-
-    try:
-        if start_date_str:
-            start_date = datetime.fromisoformat(start_date_str)
-        if end_date_str:
-            end_date = datetime.fromisoformat(end_date_str)
-        if start_date and end_date and start_date > end_date:
-            return jsonify({"error": "start_date no puede ser mayor que end_date"}), 400
-    except:
-        return jsonify({"error": "Formato de fecha inválido. Use YYYY-MM-DD"}), 400
-
+    # Conflict detection (no solapamiento permitido para misma SKU o misma categoría)
+    if product_sku:
+        conflict, existing = _check_conflict("product_sku", product_sku, start_date, end_date)
+        if conflict:
+            return jsonify({
+                "error": "Ya existe un descuento activo/solapado para este SKU",
+                "existing_discount": serialize_discount(existing)
+            }), 409
+    if discount_category:
+        conflict, existing = _check_conflict("category", discount_category, start_date, end_date)
+        if conflict:
+            return jsonify({
+                "error": "Ya existe un descuento activo/solapado para esta categoría",
+                "existing_discount": serialize_discount(existing)
+            }), 409
 
     now = datetime.utcnow()
     doc = {
-        "product_sku": product_sku,        
-        "category": discount_category, 
+        "product_sku": product_sku,
+        "category": discount_category,
         "discount_type": discount_type,
         "value": value,
         "active": bool(active),
@@ -203,23 +250,158 @@ def create_product_discount():
     res = product_discounts.insert_one(doc)
     doc["_id"] = res.inserted_id
 
-    # Retornar el descuento y el precio final calculado para facilitar pruebas
-    product_price = prod.get("price_sale", prod.get("price_sale") or 0)
-    final_price, savings_pct = compute_final_price(product_price, doc)
+    # Build response showing current product price if SKU was provided
+    product_info = None
+    if prod:
+        original_price = float(prod.get("price_sale", 0))
+        final_price, savings_pct = compute_final_price(original_price, doc)
+        product_info = {
+            "sku": product_sku,
+            "original_price": original_price,
+            "final_price": final_price,
+            "savings_pct": savings_pct
+        }
 
     return jsonify({
         "message": "Discount created",
         "discount": serialize_discount(doc),
-        "product": {
-            "sku": product_sku,
-            "original_price": product_price,
-            "final_price": final_price,
-            "savings_pct": savings_pct
-        }
+        "product": product_info
     }), 201
 
+@product_discount_api.route("/update/<string:discount_id>", methods=["PUT"])
+@jwt_required()
+def update_product_discount(discount_id):
+    ok, user_or_msg = require_admin_identity()
+    if not ok:
+        return jsonify({"error": user_or_msg}), 403
 
-@product_discount_api.route("/<string:product_sku>", methods=["GET"])
+    discount = product_discounts.find_one({"_id": ObjectId(discount_id)})
+    if not discount:
+        return jsonify({"error": "discount not found"}), 404
+
+    data = request.get_json() or {}
+    update = {}
+    # We'll compute candidate new values for conflict checks
+    new_product_sku = discount.get("product_sku")
+    new_category = discount.get("category")
+    new_start = discount.get("start_date")
+    new_end = discount.get("end_date")
+    new_discount_type = discount.get("discount_type")
+    new_value = discount.get("value")
+    new_active = discount.get("active", True)
+
+    if "product_sku" in data:
+        new_product_sku = data.get("product_sku")
+        new_category = None  # exclusividad: si pasa a SKU, category debe ser None
+
+    if "category" in data:
+        new_category = data.get("category")
+        new_product_sku = None  # exclusividad
+
+    if "discount_type" in data:
+        if data["discount_type"] not in ("percentage", "fixed"):
+            return jsonify({"error": "invalid discount_type"}), 400
+        new_discount_type = data["discount_type"]
+        update["discount_type"] = new_discount_type
+
+    if "value" in data:
+        try:
+            val = float(data["value"])
+            if new_discount_type == "percentage" and (val < 0 or val > 100):
+                return jsonify({"error": "percentage must be between 0 and 100"}), 400
+            new_value = val
+            update["value"] = new_value
+        except Exception:
+            return jsonify({"error": "value must be numeric"}), 400
+
+    if "active" in data:
+        new_active = bool(data["active"])
+        update["active"] = new_active
+
+    if "start_date" in data:
+        parsed = parse_optional_date(data.get("start_date"))
+        if not parsed and data.get("start_date") is not None:
+            return jsonify({"error": "invalid start_date"}), 400
+        new_start = parsed
+        update["start_date"] = new_start
+
+    if "end_date" in data:
+        parsed = parse_optional_date(data.get("end_date"))
+        if not parsed and data.get("end_date") is not None:
+            return jsonify({"error": "invalid end_date"}), 400
+        new_end = parsed
+        update["end_date"] = new_end
+
+    # Exclusivity checks if both provided simultaneously
+    if new_product_sku and new_category:
+        return jsonify({"error": "No puede setear product_sku y category al mismo tiempo"}), 400
+
+    # Validate referenced product/category existence
+    if new_product_sku:
+        prod = products_coll.find_one({"sku": new_product_sku})
+        if not prod:
+            return jsonify({"error": "El SKU no existe en productos"}), 404
+        update["product_sku"] = new_product_sku
+        update["category"] = None
+    if new_category:
+        exists = products_coll.find_one({"category": new_category})
+        if not exists:
+            return jsonify({"error": "La categoría no existe en productos"}), 404
+        update["category"] = new_category
+        update["product_sku"] = None
+
+    # Validate date consistency
+    if new_start and new_end and new_start > new_end:
+        return jsonify({"error": "start_date must be before end_date"}), 400
+
+    # Conflict detection (skip current discount id)
+    if new_product_sku:
+        conflict, existing = _check_conflict("product_sku", new_product_sku, new_start, new_end, exclude_id=discount_id)
+        if conflict:
+            return jsonify({
+                "error": "Ya existe un descuento activo/solapado para este SKU",
+                "existing_discount": serialize_discount(existing)
+            }), 409
+    if new_category:
+        conflict, existing = _check_conflict("category", new_category, new_start, new_end, exclude_id=discount_id)
+        if conflict:
+            return jsonify({
+                "error": "Ya existe un descuento activo/solapado para esta categoría",
+                "existing_discount": serialize_discount(existing)
+            }), 409
+
+    update["updated_at"] = datetime.utcnow()
+    product_discounts.update_one({"_id": ObjectId(discount_id)}, {"$set": update})
+
+    updated = product_discounts.find_one({"_id": ObjectId(discount_id)})
+    return jsonify({"message": "discount updated", "discount": serialize_discount(updated)}), 200
+
+@product_discount_api.route("/delete/<string:discount_id>", methods=["DELETE"])
+@jwt_required()
+def delete_product_discount(discount_id):
+    ok, user_or_msg = require_admin_identity()
+    if not ok:
+        return jsonify({"error": user_or_msg}), 403
+
+    discount = product_discounts.find_one({"_id": ObjectId(discount_id)})
+    if not discount:
+        return jsonify({"error": "discount not found"}), 404
+
+    product_discounts.update_one({"_id": ObjectId(discount_id)}, {"$set": {"active": False, "updated_at": datetime.utcnow()}})
+    return jsonify({"message": "discount disabled"}), 200
+
+@product_discount_api.route("/all", methods=["GET"])
+@jwt_required()
+def get_all_discounts():
+    ok, user_or_msg = require_admin_identity()
+    if not ok:
+        return jsonify({"error": user_or_msg}), 403
+
+    docs = list(product_discounts.find().sort([("created_at", -1)]))
+    serialized = [serialize_discount(d) for d in docs]
+    return jsonify(serialized), 200
+
+@product_discount_api.route("/sku/<string:product_sku>", methods=["GET"])
 def get_discount_by_sku(product_sku):
     prod = products_coll.find_one({"sku": product_sku})
     if not prod:
@@ -229,20 +411,14 @@ def get_discount_by_sku(product_sku):
     original_price = float(prod.get("price_sale", 0))
 
     # 1. Buscar descuento directo por producto
-    discount = product_discounts.find_one({
-        "product_sku": product_sku,
-        "active": True
-    })
-
-    # 2. Si no hay, buscar descuento por categoría
+    discount = product_discounts.find_one({"product_sku": product_sku, "active": True})
     if not (discount and is_discount_active(discount)):
-        discount = product_discounts.find_one({
-            "category": category,
-            "active": True
-        })
+        # 2. Si no hay, buscar descuento por categoría
+        discount = product_discounts.find_one({"category": category, "active": True})
 
     if discount and is_discount_active(discount):
         final_price, savings_pct = compute_final_price(original_price, discount)
+        origin = "sku" if discount.get("product_sku") else "category"
         return jsonify({
             "discount": serialize_discount(discount),
             "product": {
@@ -250,7 +426,10 @@ def get_discount_by_sku(product_sku):
                 "category": category,
                 "original_price": original_price,
                 "final_price": final_price,
-                "savings_pct": savings_pct
+                "savings_pct": savings_pct,
+                "has_discount": True,
+                "discount_origin": origin,
+                "discount_id": str(discount.get("_id"))
             }
         }), 200
 
@@ -261,10 +440,19 @@ def get_discount_by_sku(product_sku):
             "category": category,
             "original_price": original_price,
             "final_price": original_price,
-            "savings_pct": 0.0
+            "savings_pct": 0.0,
+            "has_discount": False,
+            "discount_origin": None,
+            "discount_id": None
         }
     }), 200
 
+@product_discount_api.route("/category/<string:category>", methods=["GET"])
+def get_discount_by_category(category):
+    discount = product_discounts.find_one({"category": category, "active": True})
+    if discount and is_discount_active(discount):
+        return jsonify(serialize_discount(discount)), 200
+    return jsonify({"message": "No active discount for this category"}), 200
 
 @product_discount_api.route("/apply", methods=["POST"])
 def apply_discount_to_product():
@@ -284,20 +472,23 @@ def apply_discount_to_product():
     if not prod:
         return jsonify({"error": "product not found"}), 404
 
-    # buscar descuento activo
-    discount = product_discounts.find_one({
-        "product_sku": product_sku,
-        "active": True
-    })
-
     original_price = float(prod.get("price_sale", 0))
+
+    # buscar descuento activo (prioridad SKU > category)
+    discount = product_discounts.find_one({"product_sku": product_sku, "active": True})
+    if not (discount and is_discount_active(discount)):
+        discount = product_discounts.find_one({"category": prod.get("category"), "active": True})
+
     if discount and is_discount_active(discount):
         final_price, savings_pct = compute_final_price(original_price, discount)
+        origin = "sku" if discount.get("product_sku") else "category"
         return jsonify({
             "sku": product_sku,
             "original_price": original_price,
             "final_price": final_price,
             "savings_pct": savings_pct,
+            "has_discount": True,
+            "discount_origin": origin,
             "discount": serialize_discount(discount)
         }), 200
 
@@ -306,98 +497,96 @@ def apply_discount_to_product():
         "original_price": original_price,
         "final_price": original_price,
         "savings_pct": 0.0,
+        "has_discount": False,
         "discount": None
     }), 200
 
-
-@product_discount_api.route("/<string:discount_id>", methods=["PUT"])
+@product_discount_api.route("/validate/<string:product_sku>", methods=["GET"])
 @jwt_required()
-def update_product_discount(discount_id):
+def validate_discount_possible(product_sku):
+    """
+    Endpoint que utiliza el módulo productos para consultar:
+    - Si ya existe un descuento activo por SKU
+    - Si existe un descuento activo por categoría
+    - Permite al admin saber si puede crear un nuevo descuento o si hay conflicto.
+    """
     ok, user_or_msg = require_admin_identity()
     if not ok:
         return jsonify({"error": user_or_msg}), 403
 
-    discount = product_discounts.find_one({"_id": ObjectId(discount_id)})
-    if not discount:
-        return jsonify({"error": "discount not found"}), 404
+    prod = products_coll.find_one({"sku": product_sku})
+    if not prod:
+        return jsonify({"error": "product not found"}), 404
 
-    data = request.get_json() or {}
-    update = {}
+    category = prod.get("category")
+    sku_discount = product_discounts.find_one({"product_sku": product_sku, "active": True})
+    cat_discount = product_discounts.find_one({"category": category, "active": True})
 
-    if "discount_type" in data:
-        if data["discount_type"] not in ("percentage", "fixed"):
-            return jsonify({"error": "invalid discount_type"}), 400
-        update["discount_type"] = data["discount_type"]
+    sku_active = bool(sku_discount and is_discount_active(sku_discount))
+    cat_active = bool(cat_discount and is_discount_active(cat_discount))
 
-    if "value" in data:
-        try:
-            val = float(data["value"])
-            if update.get("discount_type", discount.get("discount_type")) == "percentage" and (val < 0 or val > 100):
-                return jsonify({"error": "percentage must be between 0 and 100"}), 400
-            update["value"] = val
-        except Exception:
-            return jsonify({"error": "value must be numeric"}), 400
-
-    if "active" in data:
-        update["active"] = bool(data["active"])
-
-    if "start_date" in data:
-        parsed = parse_optional_date(data.get("start_date"))
-        if not parsed:
-            return jsonify({"error": "invalid start_date"}), 400
-        update["start_date"] = parsed
-
-    if "end_date" in data:
-        parsed = parse_optional_date(data.get("end_date"))
-        if not parsed:
-            return jsonify({"error": "invalid end_date"}), 400
-        update["end_date"] = parsed
-
-    if "start_date" in update and "end_date" in update and update["start_date"] and update["end_date"] and update["start_date"] > update["end_date"]:
-        return jsonify({"error": "start_date must be before end_date"}), 400
-
-    update["updated_at"] = datetime.utcnow()
-    product_discounts.update_one({"_id": ObjectId(discount_id)}, {"$set": update})
-
-    updated = product_discounts.find_one({"_id": ObjectId(discount_id)})
-    return jsonify({"message": "discount updated", "discount": serialize_discount(updated)}), 200
-
-
-@product_discount_api.route("/<string:discount_id>", methods=["DELETE"])
-@jwt_required()
-def delete_product_discount(discount_id):
-    ok, user_or_msg = require_admin_identity()
-    if not ok:
-        return jsonify({"error": user_or_msg}), 403
-
-    discount = product_discounts.find_one({"_id": ObjectId(discount_id)})
-    if not discount:
-        return jsonify({"error": "discount not found"}), 404
-
-    product_discounts.update_one({"_id": ObjectId(discount_id)}, {"$set": {"active": False, "updated_at": datetime.utcnow()}})
-    return jsonify({"message": "discount disabled"}), 200
-
-
-@product_discount_api.route("/all", methods=["GET"])
-@jwt_required()
-def get_all_discounts():
-    ok, user_or_msg = require_admin_identity()
-    if not ok:
-        return jsonify({"error": user_or_msg}), 403
-
-    docs = list(product_discounts.find().sort([("created_at", -1)]))
-    serialized = [serialize_discount(d) for d in docs]
-    return jsonify(serialized), 200
-
-@product_discount_api.route("/category/<string:category>", methods=["GET"])
-def get_discount_by_category(category):
-    discount = product_discounts.find_one({
+    return jsonify({
+        "sku": product_sku,
         "category": category,
+        "sku_has_active_discount": sku_active,
+        "sku_discount": serialize_discount(sku_discount) if sku_discount else None,
+        "category_has_active_discount": cat_active,
+        "category_discount": serialize_discount(cat_discount) if cat_discount else None,
+        "can_create_sku_discount": not sku_active,
+        "can_create_category_discount": not cat_active
+    }), 200
+    
+@product_discount_api.route("/preview", methods=["POST"])
+def preview_discount():
+    """
+    Permite previsualizar un descuento sin guardarlo.
+    Input:
+    {
+        "product_sku": "SKU123",
+        "discount_type": "percentage" | "fixed",
+        "value": <number>  # puede ser porcentaje o precio final
+    }
+    """
+    data = request.get_json() or {}
+    product_sku = data.get("product_sku")
+    discount_type = data.get("discount_type")
+    value = data.get("value")
+
+    if not product_sku or not discount_type or value is None:
+        return jsonify({"error": "product_sku, discount_type y value son requeridos"}), 400
+
+    # validar producto existente
+    prod = products_coll.find_one({"sku": product_sku})
+    if not prod:
+        return jsonify({"error": "product not found"}), 404
+
+    original_price = float(prod.get("price_sale", 0))
+
+    # Validar tipo de descuento
+    if discount_type not in ["percentage", "fixed"]:
+        return jsonify({"error": "discount_type debe ser 'percentage' o 'fixed'"}), 400
+
+    # Validar value
+    try:
+        val = float(value)
+        if val <= 0:
+            raise Exception()
+    except:
+        return jsonify({"error": "value debe ser un número positivo"}), 400
+
+    # Crear un objeto ficticio de descuento para reusar compute_final_price
+    fake_discount = {
+        "discount_type": discount_type,
+        "value": val,
         "active": True
-    })
+    }
 
-    if discount and is_discount_active(discount):
-        return jsonify(serialize_discount(discount)), 200
+    final_price, savings_pct = compute_final_price(original_price, fake_discount)
 
-    return jsonify({"message": "No active discount for this category"}), 200
-
+    return jsonify({
+        "original_price": original_price,
+        "final_price": final_price,
+        "savings_pct": savings_pct,
+        "discount_type": discount_type,
+        "value": val
+    }), 200
