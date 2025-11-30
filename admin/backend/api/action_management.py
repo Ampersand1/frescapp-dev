@@ -1,9 +1,8 @@
 from flask import Blueprint, jsonify, request
-from ..db import get_db
-from admin.backend import db 
+from ..db import get_db 
 
 action_api = Blueprint('action', __name__)
-actions_collection = db["actions"]
+
 # Crear una nueva acción
 @action_api.route('/action', methods=['POST'])
 def create_action():
@@ -80,5 +79,5 @@ def delete_action(actionNumber):
 
 @action_api.route('/potentialCustomers', methods=['GET'])
 def potentialCustomers():
-    customers_cursor = list(potentialCustomers.find({}, {'_id': 0}))
+    customers_cursor = list(potential_customers.find({}, {'_id': 0}))
     return jsonify(customers_cursor), 200
