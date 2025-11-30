@@ -333,16 +333,64 @@ def list_product():
 
 @product_api.route('/products_customer/<string:customer_email>', methods=['GET'])
 def list_product_customer(customer_email):
-    products_cursor = Product.objects_customer(customer_email=customer_email)
+    from flask import jsonify
 
-    product_data = []
+    # -----------------------------
+    # 1. PROYECCIÓN PARA REDUCIR PESO
+    # -----------------------------
+    projection = {
+        "name": 1,
+        "unit": 1,
+        "category": 1,
+        "sku": 1,
+        "price_sale": 1,
+        "price_purchase": 1,
+        "discount": 1,
+        "margen": 1,
+        "iva": 1,
+        "iva_value": 1,
+        "description": 1,
+        "image": 1,
+        "status": 1,
+        "quantity": 1,
+        "root": 1,
+        "child": 1,
+        "proveedor": 1,
+        "step_unit": 1,
+        "rate_root": 1
+    }
+
+    # -------------------------------------
+    # 2. CARGAR PRODUCTOS (RÁPIDO)
+    # -------------------------------------
+    if not customer_email or customer_email.strip().lower() in ["undefined", "null", "none", ""]:
+        products_cursor = list(products.find({"status": "active"}, projection))
+    else:
+        products_cursor = Product.find_for_customer(customer_email)
+
+    # -------------------------------------
+    # 3. CARGAR DESCUENTOS EN UNA SOLA CONSULTA
+    # -------------------------------------
+    active_discounts = list(product_discounts.find({"status": "active"}))
+
+    # indexarlos por SKU para lookup O(1)
+    discount_map = {d["product_sku"]: d for d in active_discounts}
+
+    result = []
+
+    # -------------------------------------
+    # 4. PROCESAR PRODUCTOS SIN RETRASOS
+    # -------------------------------------
     for product in products_cursor:
+        sku = product.get("sku")
+        discount_doc = discount_map.get(sku)
+
         base = {
             "id": str(product["_id"]),
             "name": product.get("name"),
             "unit": product.get("unit"),
             "category": product.get("category"),
-            "sku": product.get("sku"),
+            "sku": sku,
             "price_sale": product.get("price_sale"),
             "price_purchase": product.get("price_purchase"),
             "discount": product.get("discount"),
@@ -352,7 +400,7 @@ def list_product_customer(customer_email):
             "description": product.get("description"),
             "image": product.get("image"),
             "status": product.get("status"),
-            "quantity": product.get("quantity"),
+            "quantity": product.get("quantity", 0),
             "root": product.get("root"),
             "child": product.get("child"),
             "proveedor": product.get("proveedor"),
@@ -360,30 +408,45 @@ def list_product_customer(customer_email):
             "rate_root": product.get("rate_root"),
         }
 
-        # Aplicar descuento activo si existe
-        discount_doc = get_active_discount_for_product(product)
-        if discount_doc and is_discount_active(discount_doc):
-            final_price, savings_pct = compute_final_price(base["price_sale"], discount_doc)
+        # -------------------------------------------------
+        # 5. APLICAR DESCUENTO SI EXISTE — CÁLCULO RÁPIDO
+        # -------------------------------------------------
+        if discount_doc:
+            # calcula precio final
+            price = base["price_sale"]
+            value = discount_doc.get("value")
+            dtype = discount_doc.get("discount_type")
+
+            if dtype == "percentage":
+                final_price = price - (price * value / 100)
+                savings_pct = value
+            else:
+                final_price = price - value
+                savings_pct = (value / price) * 100 if price else 0
+
             base.update({
-                "final_price": final_price,
+                "final_price": round(final_price, 2),
                 "has_discount": True,
-                "discount_type": discount_doc.get("discount_type"),
-                "discount_value": discount_doc.get("value"),
-                "savings_pct": savings_pct
+                "discount_type": dtype,
+                "discount_value": value,
+                "savings_pct": round(savings_pct, 2)
             })
+
         else:
             base.update({
                 "final_price": base["price_sale"],
                 "has_discount": False,
                 "discount_type": None,
                 "discount_value": None,
-                "savings_pct": 0.0
+                "savings_pct": 0
             })
 
-        product_data.append(base)
+        result.append(base)
 
-    products_json = json.dumps(product_data, default=str)
-    return products_json, 200
+    # -------------------------------------
+    # 6. DEVOLVER RESPONSE JSON INSTANTÁNEO
+    # -------------------------------------
+    return jsonify(result), 200
 
 
 @product_api.route('/syn_products_page', methods=['GET'])

@@ -71,29 +71,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> getInitialProducts() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String userEmail = prefs.getString('user_email') ?? 'undefined';
+Future<void> getInitialProducts() async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final String? userEmail = prefs.getString('user_email');
 
-    allProducts = await productService.getProducts(userEmail);
+  // IMPORTANTE: el backend necesita el string "undefined"
+  final String safeEmail =
+      (userEmail == null || userEmail.isEmpty) ? 'undefined' : userEmail;
 
-    setState(() {
-      displayedProducts = allProducts.toList();
-    });
+  print("==== EMAIL PARA PETICIÓN ====");
+  print(safeEmail);
 
-    loadOrder(widget.order ?? Order());
-  }
+  allProducts = await productService.getProducts(safeEmail);
+
+  setState(() {
+    displayedProducts = allProducts.toList();
+  });
+
+  loadOrder(widget.order ?? Order());
+}
+
+
 
   // --- LÓGICA DE DESCUENTOS SIMULADA (Misma que en DescuentosPage) ---
   double _getProductDiscount(Product product) {
     if (product.name != null) {
-      if (product.name!.length % 3 == 0) return 0.20; 
-      if (product.name!.length % 5 == 0) return 0.10; 
+      if (product.name!.length % 3 == 0) return 0.20;
+      if (product.name!.length % 5 == 0) return 0.10;
     }
     return 0.0;
   }
 
-  double _calculateDiscountedPrice(double originalPrice, double discountPercent) {
+  double _calculateDiscountedPrice(
+      double originalPrice, double discountPercent) {
     return originalPrice * (1 - discountPercent);
   }
   // -------------------------------------
@@ -156,11 +166,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> loadOrder(Order order) async {
     // Si widget.order viene lleno (por ejemplo, al volver de Descuentos), usamos eso
     if (widget.order != null && (widget.order?.products?.isNotEmpty ?? false)) {
-       // Sincronizar la lista local de productos (allProducts) con las cantidades de la orden
-       for (var product in allProducts) {
+      // Sincronizar la lista local de productos (allProducts) con las cantidades de la orden
+      for (var product in allProducts) {
         var matchingProduct = widget.order!.products!.firstWhere(
           (orderProduct) => orderProduct.sku == product.sku,
-          orElse: () => Product(sku: "dummy"), 
+          orElse: () => Product(sku: "dummy"),
         );
         if (matchingProduct.sku != "dummy") {
           product.quantity = matchingProduct.quantity;
@@ -169,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
       productsInCart = widget.order!.products!;
-    } 
+    }
     // Lógica original de carga de usuario...
     else if (widget.order == null) {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -191,11 +201,12 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       }
-    } 
+    }
 
     setState(() {
       // Actualizar contador
-      productCounter = productsInCart.fold(0, (sum, item) => sum + (item.quantity ?? 0));
+      productCounter =
+          productsInCart.fold(0, (sum, item) => sum + (item.quantity ?? 0));
       userAddress = order.deliveryAddress ?? '';
       name = order.customerName ?? 'Frescapp';
       displayedProducts = allProducts.toList();
@@ -276,9 +287,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ).then((_) {
-                 setState(() {
-                   productCounter = productsInCart.fold(0, (sum, item) => sum + (item.quantity ?? 0));
-                 });
+                setState(() {
+                  productCounter = productsInCart.fold(
+                      0, (sum, item) => sum + (item.quantity ?? 0));
+                });
               });
             },
           ),
@@ -304,12 +316,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemCount: displayedProducts.length,
                 itemBuilder: (context, index) {
                   Product product = displayedProducts[index];
-                  
+
                   double discountPercent = _getProductDiscount(product);
                   bool hasDiscount = discountPercent > 0;
                   double originalPrice = (product.priceSale as num).toDouble();
-                  double finalPrice = hasDiscount 
-                      ? _calculateDiscountedPrice(originalPrice, discountPercent) 
+                  double finalPrice = hasDiscount
+                      ? _calculateDiscountedPrice(
+                          originalPrice, discountPercent)
                       : originalPrice;
 
                   return ListTile(
@@ -319,7 +332,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         CircleAvatar(
                           radius: 30,
                           backgroundColor: Colors.white,
-                          backgroundImage: NetworkImage(product.image as String),
+                          backgroundImage:
+                              NetworkImage(product.image as String),
                         ),
                         if (hasDiscount)
                           Positioned(
@@ -328,16 +342,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: const BoxDecoration(
-                                color: Colors.yellow,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 2,
-                                    offset: Offset(1, 1),
-                                  )
-                                ]
-                              ),
+                                  color: Colors.yellow,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 2,
+                                      offset: Offset(1, 1),
+                                    )
+                                  ]),
                               child: Text(
                                 '-${(discountPercent * 100).toInt()}%',
                                 style: const TextStyle(
@@ -361,8 +374,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           if (hasDiscount) ...[
-                             TextSpan(
-                              text: '\n\$ ${NumberFormat('#,###').format(originalPrice)} ',
+                            TextSpan(
+                              text:
+                                  '\n\$ ${NumberFormat('#,###').format(originalPrice)} ',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey,
@@ -371,16 +385,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             TextSpan(
-                              text: '\$ ${NumberFormat('#,###').format(finalPrice)}',
+                              text:
+                                  '\$ ${NumberFormat('#,###').format(finalPrice)}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green,
                                 fontSize: 14,
                               ),
                             ),
-                          ] else 
+                          ] else
                             TextSpan(
-                              text: '\n\$ ${NumberFormat('#,###').format(originalPrice)}',
+                              text:
+                                  '\n\$ ${NumberFormat('#,###').format(originalPrice)}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
@@ -415,8 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             product.quantity.toString(),
                             style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
                         ElevatedButton(
@@ -443,8 +458,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         context: context,
                         builder: (context) {
                           return StatefulBuilder(
-                            builder: (BuildContext context,
-                                StateSetter setState) {
+                            builder:
+                                (BuildContext context, StateSetter setState) {
                               return AlertDialog(
                                 title: Text(product.name as String,
                                     style: const TextStyle(
@@ -489,7 +504,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold),
                                         textAlign: TextAlign.center),
-                                    
                                     if (hasDiscount)
                                       Column(
                                         children: [
@@ -498,7 +512,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.grey,
-                                              decoration: TextDecoration.lineThrough,
+                                              decoration:
+                                                  TextDecoration.lineThrough,
                                             ),
                                             textAlign: TextAlign.center,
                                           ),
@@ -515,11 +530,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                       )
                                     else
                                       Text(
-                                        ' \$  ${NumberFormat('#,###').format(product.priceSale)}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                        textAlign: TextAlign.center),
-                                    
+                                          ' \$  ${NumberFormat('#,###').format(product.priceSale)}',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                          textAlign: TextAlign.center),
                                     Text(product.category as String,
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold),
@@ -533,33 +547,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                               decreaseQuantity(product);
                                             });
                                           },
-                                          style:
-                                              ElevatedButton.styleFrom(
+                                          style: ElevatedButton.styleFrom(
                                             shape: const CircleBorder(),
-                                            padding:
-                                                const EdgeInsets.all(5),
+                                            padding: const EdgeInsets.all(5),
                                             backgroundColor:
                                                 const Color.fromARGB(
                                                     221, 223, 98, 89),
-                                            minimumSize:
-                                                const Size(30, 30),
-                                            maximumSize:
-                                                const Size(30, 30),
+                                            minimumSize: const Size(30, 30),
+                                            maximumSize: const Size(30, 30),
                                           ),
                                           child: const Icon(Icons.remove,
-                                              color: Colors.white,
-                                              size: 16),
+                                              color: Colors.white, size: 16),
                                         ),
                                         Padding(
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 8.0),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             product.quantity.toString(),
                                             style: const TextStyle(
                                                 fontSize: 16,
-                                                fontWeight:
-                                                    FontWeight.bold),
+                                                fontWeight: FontWeight.bold),
                                           ),
                                         ),
                                         ElevatedButton(
@@ -568,22 +575,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                               increaseQuantity(product);
                                             });
                                           },
-                                          style:
-                                              ElevatedButton.styleFrom(
+                                          style: ElevatedButton.styleFrom(
                                             shape: const CircleBorder(),
-                                            padding:
-                                                const EdgeInsets.all(5),
+                                            padding: const EdgeInsets.all(5),
                                             backgroundColor:
                                                 const Color.fromARGB(
                                                     255, 97, 143, 99),
-                                            minimumSize:
-                                                const Size(30, 30),
-                                            maximumSize:
-                                                const Size(30, 30),
+                                            minimumSize: const Size(30, 30),
+                                            maximumSize: const Size(30, 30),
                                           ),
                                           child: const Icon(Icons.add,
-                                              color: Colors.white,
-                                              size: 16),
+                                              color: Colors.white, size: 16),
                                         ),
                                       ],
                                     ),
@@ -615,7 +617,8 @@ class _HomeScreenState extends State<HomeScreen> {
           currentIndex: 0,
           selectedItemColor: Colors.lightGreen.shade900,
           unselectedItemColor: Colors.grey,
-          type: BottomNavigationBarType.fixed, // Asegura que se vean todos los labels
+          type: BottomNavigationBarType
+              .fixed, // Asegura que se vean todos los labels
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.home),
@@ -638,7 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.local_offer),
-              label: 'Descuentos', 
+              label: 'Descuentos',
             ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.message_rounded),
@@ -646,35 +649,45 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
           onTap: (int index) {
-            
             // IMPORTANTE: Sincronizar el estado del carrito antes de salir del Home
             _prepareOrderForNavigation();
 
             List<VoidCallback> activeActions = [];
-            
+
             // 1. Inicio (Recargar Home)
-            activeActions.add(() => Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => HomeScreen(order: widget.order))));
-            
+            activeActions.add(() => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => HomeScreen(order: widget.order))));
+
             // 2. Pedidos (si activo)
             if (_userActive) {
-              activeActions.add(() => Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => OrdersScreen(order: widget.order))));
+              activeActions.add(() => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          OrdersScreen(order: widget.order))));
             }
-            
+
             // 3. Login (si inactivo) o Perfil (si activo)
             if (!_userActive) {
               activeActions.add(() => Navigator.pushReplacement(context,
                   MaterialPageRoute(builder: (context) => LoginScreen())));
             } else {
-              activeActions.add(() => Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => ProfileScreen(order: widget.order))));
+              activeActions.add(() => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          ProfileScreen(order: widget.order))));
             }
-            
+
             // 4. Descuentos (AQUI ESTABA EL ERROR, AHORA SE PASA EL ORDER)
-            activeActions.add(() => Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => DescuentosPage(order: widget.order))));
-            
+            activeActions.add(() => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>
+                        DescuentosPage(order: widget.order))));
+
             // 5. WhatsApp
             activeActions.add(() => _openWhatsApp(context));
 

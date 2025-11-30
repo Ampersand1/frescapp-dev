@@ -1,25 +1,26 @@
 import 'package:frescapp/models/product.dart';
 
 class Order {
-  late String? id;
-  late String? orderNumber;
-  late String? customerEmail;
-  late String? customerPhone;
-  late String? customerDocumentNumber;
-  late String? customerDocumentType;
-  late String? customerName;
-  late String? deliveryDate;
-  late String? status;
-  late String? createdAt;
-  late String? updatedAt;
-  late List<Product>? products;
-  late double? total;
-  late String? deliverySlot;
-  late String? paymentMethod;
-  late String? deliveryAddress;
-  late String? deliveryAddressDetails;
-  late double? deliveryCost; 
-  late double? discount;
+  String? id;
+  String? orderNumber;
+  String? customerEmail;
+  String? customerPhone;
+  String? customerDocumentNumber;
+  String? customerDocumentType;
+  String? customerName;
+  String? deliveryDate;
+  String? status;
+  String? createdAt;
+  String? updatedAt;
+  List<Product>? products;
+  double? total;
+  String? deliverySlot;
+  String? paymentMethod;
+  String? deliveryAddress;
+  String? deliveryAddressDetails;
+  double? deliveryCost;
+  double? discount;
+
   Order({
     this.id,
     this.orderNumber,
@@ -39,7 +40,7 @@ class Order {
     this.deliveryAddress,
     this.deliveryAddressDetails,
     this.deliveryCost,
-    this.discount
+    this.discount,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -55,17 +56,21 @@ class Order {
       status: json['status'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
+
       products: (json['products'] as List<dynamic>?)
           ?.map((productJson) => Product.fromJson(productJson))
           .toList(),
+
       total: (json['total'] as num?)?.toDouble(),
       deliverySlot: json['deliverySlot'] as String?,
       paymentMethod: json['paymentMethod'] as String?,
       deliveryAddress: json['deliveryAddress'] as String?,
       deliveryAddressDetails: json['deliveryAddressDetails'] as String?,
-      deliveryCost : json['deliveryCost'] as double?,
-      discount : 0.0 as double?
 
+      deliveryCost: (json['deliveryCost'] as num?)?.toDouble(),
+
+      /// Si no viene en JSON, lo dejamos en 0.0
+      discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -82,14 +87,16 @@ class Order {
       'status': status,
       'created_at': createdAt,
       'updated_at': updatedAt,
+
       'products': products?.map((product) => product.toJson()).toList(),
+
       'total': total,
       'deliverySlot': deliverySlot,
       'paymentMethod': paymentMethod,
       'deliveryAddress': deliveryAddress,
-      'deliveryAddressDetails': deliveryAddressDetails,      
+      'deliveryAddressDetails': deliveryAddressDetails,
       'deliveryCost': deliveryCost,
-      'discount' : discount
+      'discount': discount,
     };
   }
 }

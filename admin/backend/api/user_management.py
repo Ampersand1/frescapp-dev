@@ -204,3 +204,26 @@ def change_password_admin():
     users_collection.update_one({'_id': ObjectId(user_id)}, {'$set': {'password': new_hashed}})
 
     return jsonify({'message': 'Admin password updated successfully'}), 200
+@user_api.route('/create_admin', methods=['POST'])
+def create_admin():
+    data = request.json or {}
+    required = ['name', 'email', 'user', 'password']
+
+    if not all(field in data for field in required):
+        return jsonify({"message": "Missing required fields"}), 400
+
+    new_admin = {
+        "name": data["name"],
+        "email": data["email"],
+        "user": data["user"],
+        "phone": data.get("phone", "3197076361"),
+        "password": data["password"],  # Ya debe ser scrypt/bcrypt
+        "role": ["administrador"],
+        "status": "active",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+
+    users_collection.insert_one(new_admin)
+
+    return jsonify({"message": "Admin created successfully", "user": new_admin["user"]}), 201
