@@ -5,8 +5,8 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
   providedIn: 'root'
 })
 export class AlegraService {
-  private baseUrl = 'https://app.buyfrescapp.com:5000/';
-  //private baseUrl = 'http://127.0.0.1:5000/';
+  //private baseUrl = 'https://app.buyfrescapp.com:5000/';
+  private baseUrl = 'http://127.0.0.1:5000/';
 
 
   constructor(private http: HttpClient) { }

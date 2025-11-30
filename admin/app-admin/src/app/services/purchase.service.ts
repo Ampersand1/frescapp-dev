@@ -6,8 +6,8 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class PurchaseService {
-  private baseUrl = 'https://app.buyfrescapp.com:5000/';
-  //private baseUrl = 'http://localhost:5000/';
+  //private baseUrl = 'https://app.buyfrescapp.com:5000/';
+  private baseUrl = 'http://localhost:5000/';
   constructor(private http: HttpClient) { }
   getPurchases():Observable<any> {
     return this.http.get<any[]>(this.baseUrl+'api/purchase/purchases/');

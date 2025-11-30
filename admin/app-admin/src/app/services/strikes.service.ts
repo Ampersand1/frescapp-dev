@@ -16,8 +16,8 @@ export interface Strike {
   providedIn: 'root'
 })
 export class StrikesService {
-  private baseUrl = 'https://app.buyfrescapp.com:5000/api/strikes';
-  //private baseUrl = 'http://localhost:5000/api/strikes';
+  //private baseUrl = 'https://app.buyfrescapp.com:5000/api/strikes';
+  private baseUrl = 'http://localhost:5000/api/strikes';
 
   constructor(private http: HttpClient) { }
 
