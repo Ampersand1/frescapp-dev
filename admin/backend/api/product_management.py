@@ -19,10 +19,9 @@ from dateutil import parser as date_parser
 
 product_api = Blueprint('product', __name__)
 
-# DB collections (usar mismo cliente que el resto)
 db = get_db()
-product_discounts_coll = db["product_discounts"]
-products_collection = db["products"]
+product_discounts = db["product_discounts"]
+products = db["products"]
 
 
 # ---------------------------
@@ -124,13 +123,13 @@ def get_active_discount_for_product(product):
 
     # 1) por SKU
     if sku:
-        d = product_discounts_coll.find_one({"product_sku": sku, "active": True})
+        d = product_discounts.find_one({"product_sku": sku, "active": True})
         if d and is_discount_active(d):
             return d
 
     # 2) por categoria
     if category:
-        d = product_discounts_coll.find_one({"category": category, "active": True})
+        d = product_discounts.find_one({"category": category, "active": True})
         if d and is_discount_active(d):
             return d
 
@@ -501,7 +500,7 @@ def get_product_full(sku):
     Diseñado para el modal de 'Agregar descuento' del admin.
     """
     # Obtener producto desde Mongo
-    product = products_collection.find_one({"sku": sku})
+    product = products.find_one({"sku": sku})
     if not product:
         return jsonify({"error": "Product not found"}), 404
 
@@ -510,10 +509,10 @@ def get_product_full(sku):
     category = product.get("category")
 
     # Buscar descuento activo (SKU → Category)
-    discount = product_discounts_coll.find_one({"product_sku": sku, "active": True})
+    discount = product_discounts.find_one({"product_sku": sku, "active": True})
 
     if not (discount and is_discount_active(discount)):
-        discount = product_discounts_coll.find_one({"category": category, "active": True})
+        discount = product_discounts.find_one({"category": category, "active": True})
 
     # Calcular precio final
     if discount and is_discount_active(discount):

@@ -46,6 +46,7 @@ from .api.cierre_management import cierres_api
 from .api.strikes_management import strike_api
 from .api.product_discount_management import product_discount_api
 from .api.db_info import debug_db_api
+from .api.debug_prod_db import debug_prod_api
 
 # Registro de rutas
 app.register_blueprint(order_api, url_prefix='/api/order')
@@ -69,6 +70,7 @@ app.register_blueprint(cierres_api, url_prefix='/api/cierres')
 app.register_blueprint(strike_api, url_prefix='/api/strikes')
 app.register_blueprint(product_discount_api, url_prefix="/api/product_discount")
 app.register_blueprint(debug_db_api, url_prefix="/api/debug")
+app.register_blueprint(debug_prod_api)
 
 # ---------------------------
 # Ruta raíz

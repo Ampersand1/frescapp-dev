@@ -9,7 +9,7 @@ import math
 
 db = get_db()
 product_discounts = db["product_discounts"]
-products_coll = db["products"]
+products = db["products"]
 
 product_discount_api = Blueprint("product_discount_api", __name__)
 
@@ -207,11 +207,11 @@ def create_product_discount():
     # Validate existence of referenced product/category
     prod = None
     if product_sku:
-        prod = products_coll.find_one({"sku": product_sku})
+        prod = products.find_one({"sku": product_sku})
         if not prod:
             return jsonify({"error": "El SKU no existe en productos"}), 404
     if discount_category:
-        exists = products_coll.find_one({"category": discount_category})
+        exists = products.find_one({"category": discount_category})
         if not exists:
             return jsonify({"error": "La categoría no existe en productos"}), 404
 
@@ -338,13 +338,13 @@ def update_product_discount(discount_id):
 
     # Validate referenced product/category existence
     if new_product_sku:
-        prod = products_coll.find_one({"sku": new_product_sku})
+        prod = products.find_one({"sku": new_product_sku})
         if not prod:
             return jsonify({"error": "El SKU no existe en productos"}), 404
         update["product_sku"] = new_product_sku
         update["category"] = None
     if new_category:
-        exists = products_coll.find_one({"category": new_category})
+        exists = products.find_one({"category": new_category})
         if not exists:
             return jsonify({"error": "La categoría no existe en productos"}), 404
         update["category"] = new_category
@@ -403,7 +403,7 @@ def get_all_discounts():
 
 @product_discount_api.route("/sku/<string:product_sku>", methods=["GET"])
 def get_discount_by_sku(product_sku):
-    prod = products_coll.find_one({"sku": product_sku})
+    prod = products.find_one({"sku": product_sku})
     if not prod:
         return jsonify({"error": "product not found"}), 404
 
@@ -468,7 +468,7 @@ def apply_discount_to_product():
     if not product_sku:
         return jsonify({"error": "product_sku required"}), 400
 
-    prod = products_coll.find_one({"sku": product_sku, "status": {"$in": ["active", None]}})
+    prod = products.find_one({"sku": product_sku, "status": {"$in": ["active", None]}})
     if not prod:
         return jsonify({"error": "product not found"}), 404
 
@@ -514,7 +514,7 @@ def validate_discount_possible(product_sku):
     if not ok:
         return jsonify({"error": user_or_msg}), 403
 
-    prod = products_coll.find_one({"sku": product_sku})
+    prod = products.find_one({"sku": product_sku})
     if not prod:
         return jsonify({"error": "product not found"}), 404
 
@@ -556,7 +556,7 @@ def preview_discount():
         return jsonify({"error": "product_sku, discount_type y value son requeridos"}), 400
 
     # validar producto existente
-    prod = products_coll.find_one({"sku": product_sku})
+    prod = products.find_one({"sku": product_sku})
     if not prod:
         return jsonify({"error": "product not found"}), 404
 
