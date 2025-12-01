@@ -605,7 +605,7 @@ def get_product_full(sku):
         },
         "discount": discount_info
     }), 200
-@product_api.route('/products/discounts', methods=['GET'])
+@product_api.route('products/discounts', methods=['GET'])
 def list_discount_products():
     from ..models.product_discount import ProductDiscount
     from ..models.product import Product
@@ -613,7 +613,9 @@ def list_discount_products():
     search = request.args.get("search", "").lower()
 
     # 1. Buscar todos los descuentos activos
-    discounts = ProductDiscount.objects_active()
+    discounts = list(product_discounts.find({"active": True}))
+    discounts = [d for d in discounts if ProductDiscount.is_active(d)]
+
 
     result = []
 
@@ -656,7 +658,6 @@ def calculate_cart_total():
     items = data.get("items", [])
 
     from ..models.product import Product
-    from ..models.product_discount import ProductDiscount
 
     total_original = 0
     total_final = 0
@@ -670,16 +671,13 @@ def calculate_cart_total():
         if not product:
             continue
 
-        price_original = product["price_sale"]
+        price_original = float(product.get("price_sale", 0))
 
-        discount = ProductDiscount.get_best_discount(sku, product["category"])
+        # --- Usar lógica correcta (misma de home/descuentos) ---
+        discount_doc = get_active_discount_for_product(product)
 
-        if discount:
-            price_final = ProductDiscount.apply_discount_to_price(
-                price_original,
-                discount["discount_type"],
-                discount["value"]
-            )
+        if discount_doc and is_discount_active(discount_doc):
+            price_final, _ = compute_final_price(price_original, discount_doc)
         else:
             price_final = price_original
 
@@ -696,7 +694,8 @@ def calculate_cart_total():
             "price_final": price_final,
             "subtotal_original": subtotal_original,
             "subtotal_final": subtotal_final,
-            "subtotal_saved": subtotal_original - subtotal_final
+            "subtotal_saved": subtotal_original - subtotal_final,
+            "has_discount": bool(discount_doc)
         })
 
     return jsonify({
@@ -705,3 +704,4 @@ def calculate_cart_total():
         "total_saved": total_original - total_final,
         "items": detailed_items
     }), 200
+

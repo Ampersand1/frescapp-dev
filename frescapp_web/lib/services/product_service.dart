@@ -23,7 +23,7 @@ class ProductService {
 
     // 2) Traer productos con descuento
     final discountResponse = await http.get(
-      Uri.parse('${ApiRoutes.baseUrl}${ApiRoutes.products}/discounts'),
+      Uri.parse('${ApiRoutes.baseUrl}${ApiRoutes.products}/products/discounts'),
     );
 
     if (discountResponse.statusCode == 200) {
