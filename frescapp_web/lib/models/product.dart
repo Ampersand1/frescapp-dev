@@ -25,12 +25,12 @@ class Product {
   /// CANTIDAD MODIFICABLE
   double? quantity;
 
-  // Campos para descuentos
-  final double? finalPrice;
-  final bool hasDiscount;
-  final String? discountType;
-  final double? discountValue;
-  final double? savingsPct;
+  // Campos para descuentos MODIFICABLES
+  double? finalPrice; // quitamos final
+  bool hasDiscount;   // quitamos final
+  String? discountType;
+  double? discountValue;
+  double? savingsPct;
 
   Product({
     this.id,
@@ -53,12 +53,12 @@ class Product {
     this.stepUnit,
     this.rateRoot,
     this.quantity,
-    this.finalPrice,
+    double? finalPrice,
     this.hasDiscount = false,
     this.discountType,
     this.discountValue,
     this.savingsPct,
-  });
+  }) : finalPrice = finalPrice ?? priceSale; // inicializamos por defecto
 
   /// Conversión robusta a double
   static double _toDouble(dynamic v) {
@@ -105,7 +105,6 @@ class Product {
       rateRoot: _toDouble(json["rate_root"]),
       quantity: _toDouble(json["quantity"]),
 
-      // Campos descuento
       finalPrice: _toDouble(json["final_price"] ?? json["price_sale"]),
       hasDiscount: json["has_discount"] ?? false,
       discountType: json["discount_type"],
@@ -114,7 +113,6 @@ class Product {
     );
   }
 
-  /// Necesario para serializar orders
   Map<String, dynamic> toJson() {
     return {
       "id": id,
@@ -142,7 +140,6 @@ class Product {
 
       "quantity": quantity,
 
-      // descuento
       "final_price": finalPrice,
       "has_discount": hasDiscount,
       "discount_type": discountType,

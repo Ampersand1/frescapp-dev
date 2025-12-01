@@ -29,11 +29,11 @@ class _DescuentosPageState extends State<DescuentosPage> {
 
   final ProductService productService = ProductService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   bool _isLoading = true;
   bool _userActive = false;
   String searchQuery = '';
-  
+
   List<Product> allProducts = [];
   late Order currentOrder;
   late num productCounter = 0;
@@ -45,7 +45,7 @@ class _DescuentosPageState extends State<DescuentosPage> {
     // Aseguramos que currentOrder no sea nulo y tenga una lista inicializada
     currentOrder = widget.order ?? Order(products: []);
     if (currentOrder.products == null) currentOrder.products = [];
-    
+
     getInitialProducts();
   }
 
@@ -54,8 +54,9 @@ class _DescuentosPageState extends State<DescuentosPage> {
     final String userEmail = prefs.getString('user_email') ?? 'undefined';
 
     try {
-      List<Product> fetchedProducts = await productService.getProducts(userEmail);
-      
+      List<Product> fetchedProducts =
+          await productService.getProducts(userEmail);
+
       setState(() {
         allProducts = fetchedProducts;
         _syncProductsWithCart(); // Sincronización inicial crítica
@@ -70,7 +71,9 @@ class _DescuentosPageState extends State<DescuentosPage> {
 
   // Actualiza el contador visual de productos totales
   void _updateCounter() {
-    productCounter = currentOrder.products?.fold(0, (sum, item) => sum! + (item.quantity ?? 0)) ?? 0;
+    productCounter = currentOrder.products
+            ?.fold(0, (sum, item) => sum! + (item.quantity ?? 0)) ??
+        0;
   }
 
   // Sincroniza lo que ves en pantalla con lo que hay en la memoria de la orden
@@ -93,15 +96,6 @@ class _DescuentosPageState extends State<DescuentosPage> {
         product.quantity = 0;
       }
     }
-  }
-
-  double _getProductDiscount(Product product) {
-    if (product.name != null) {
-      // Simulación de descuentos (Ajusta esto a tu lógica real si viene de DB)
-      if (product.name!.length % 3 == 0) return 0.20; 
-      if (product.name!.length % 5 == 0) return 0.10; 
-    }
-    return 0.0;
   }
 
   void increaseQuantity(Product product) {
@@ -131,9 +125,9 @@ class _DescuentosPageState extends State<DescuentosPage> {
   // Lógica central de actualización del carrito
   void _updateOrder(Product product) {
     if (currentOrder.products == null) currentOrder.products = [];
-    
+
     int index = currentOrder.products!.indexWhere((p) => p.sku == product.sku);
-    
+
     if (index != -1) {
       // El producto ya existe en el carrito
       if ((product.quantity ?? 0) > 0) {
@@ -155,10 +149,13 @@ class _DescuentosPageState extends State<DescuentosPage> {
       try {
         final response = await http.post(
           Uri.parse('${ApiRoutes.baseUrl}${ApiRoutes.user}/check_token'),
-          headers: {'Content-Type': 'application/json; charset=UTF-8', 'Authorization': 'Bearer $token'},
+          headers: {
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token'
+          },
         );
         setState(() => _userActive = response.statusCode == 200);
-      } catch(e) {
+      } catch (e) {
         setState(() => _userActive = false);
       }
     }
@@ -167,7 +164,8 @@ class _DescuentosPageState extends State<DescuentosPage> {
   void _openWhatsApp(BuildContext context) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String contactPhone = prefs.getString('contact_phone') ?? '';
-    String url = 'whatsapp://send?phone=$contactPhone&text=${Uri.encodeComponent("Hola, tengo una duda.")}';
+    String url =
+        'whatsapp://send?phone=$contactPhone&text=${Uri.encodeComponent("Hola, tengo una duda.")}';
     await launchUrlString(url);
   }
 
@@ -185,7 +183,8 @@ class _DescuentosPageState extends State<DescuentosPage> {
     // 0: Home -> Usamos pushAndRemoveUntil para limpiar el stack y que sea la base
     if (index == 0) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => HomeScreen(order: currentOrder)),
+        MaterialPageRoute(
+            builder: (context) => HomeScreen(order: currentOrder)),
         (Route<dynamic> route) => false,
       );
       return;
@@ -199,12 +198,14 @@ class _DescuentosPageState extends State<DescuentosPage> {
 
     // Para las demás pantallas, usamos pushReplacement para sustituir la pantalla actual
     Widget? nextScreen;
-    
+
     if (_userActive) {
       if (index == 1) nextScreen = OrdersScreen(order: currentOrder);
       if (index == 3) nextScreen = ProfileScreen(order: currentOrder);
     } else {
-      if (index == 2) nextScreen = LoginScreen(); // Login usualmente no recibe orden, pero cuidado al volver
+      if (index == 2)
+        nextScreen =
+            LoginScreen(); // Login usualmente no recibe orden, pero cuidado al volver
     }
 
     if (nextScreen != null) {
@@ -219,13 +220,15 @@ class _DescuentosPageState extends State<DescuentosPage> {
   @override
   Widget build(BuildContext context) {
     final productosFiltrados = allProducts.where((p) {
-      final bool matchesSearch = (p.name ?? '').toLowerCase().contains(searchQuery.toLowerCase());
-      final bool hasDiscount = _getProductDiscount(p) > 0;
+      final bool matchesSearch =
+          (p.name ?? '').toLowerCase().contains(searchQuery.toLowerCase());
+      final bool hasDiscount = p.hasDiscount;
       return matchesSearch && hasDiscount;
     }).toList();
 
-    final categorias = productosFiltrados.map((p) => p.category ?? 'Varios').toSet().toList();
-    
+    final categorias =
+        productosFiltrados.map((p) => p.category ?? 'Varios').toSet().toList();
+
     int currentIndex = _userActive ? 3 : 2;
 
     return WillPopScope(
@@ -265,82 +268,81 @@ class _DescuentosPageState extends State<DescuentosPage> {
             )
           ],
         ),
-        body: _isLoading 
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Buscar productos...',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Buscar productos...',
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onChanged: (value) => setState(() => searchQuery = value),
                     ),
-                    onChanged: (value) => setState(() => searchQuery = value),
-                  ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: productosFiltrados.isEmpty
+                          ? Center(
+                              child: Text(
+                                "🥬 No hay ofertas disponibles",
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ).merge(fontStyle),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: categorias.length,
+                              itemBuilder: (context, index) {
+                                final categoria = categorias[index];
+                                final productosCategoria = productosFiltrados
+                                    .where((p) => p.category == categoria)
+                                    .toList();
 
-                  const SizedBox(height: 12),
-
-                  Expanded(
-                    child: productosFiltrados.isEmpty
-                        ? Center(
-                            child: Text(
-                              "🥬 No hay ofertas disponibles",
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ).merge(fontStyle),
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      child: Text(
+                                        categoria,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20,
+                                          color: verdePrincipal,
+                                        ).merge(fontStyle),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 300,
+                                      child: ListView.builder(
+                                        physics: const BouncingScrollPhysics(),
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: productosCategoria.length,
+                                        itemBuilder: (context, i) {
+                                          return _buildProductCard(
+                                              productosCategoria[i]);
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                  ],
+                                );
+                              },
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: categorias.length,
-                            itemBuilder: (context, index) {
-                              final categoria = categorias[index];
-                              final productosCategoria = productosFiltrados
-                                  .where((p) => p.category == categoria)
-                                  .toList();
-
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    child: Text(
-                                      categoria,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                        color: verdePrincipal,
-                                      ).merge(fontStyle),
-                                    ),
-                                  ),
-
-                                  SizedBox(
-                                    height: 300, 
-                                    child: ListView.builder(
-                                      physics: const BouncingScrollPhysics(), 
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: productosCategoria.length,
-                                      itemBuilder: (context, i) {
-                                        return _buildProductCard(productosCategoria[i]);
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                ],
-                              );
-                            },
-                          ),
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-
         bottomNavigationBar: SafeArea(
           child: BottomNavigationBar(
             currentIndex: currentIndex,
@@ -348,12 +350,21 @@ class _DescuentosPageState extends State<DescuentosPage> {
             unselectedItemColor: Colors.grey,
             type: BottomNavigationBarType.fixed,
             items: [
-              const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-              if (_userActive) const BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Pedidos'),
-              if (!_userActive) const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Login'),
-              if (_userActive) const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
-              const BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Descuentos'),
-              const BottomNavigationBarItem(icon: Icon(Icons.message_rounded), label: 'WhatsApp'),
+              const BottomNavigationBarItem(
+                  icon: Icon(Icons.home), label: 'Inicio'),
+              if (_userActive)
+                const BottomNavigationBarItem(
+                    icon: Icon(Icons.shopping_cart), label: 'Pedidos'),
+              if (!_userActive)
+                const BottomNavigationBarItem(
+                    icon: Icon(Icons.person), label: 'Login'),
+              if (_userActive)
+                const BottomNavigationBarItem(
+                    icon: Icon(Icons.person), label: 'Perfil'),
+              const BottomNavigationBarItem(
+                  icon: Icon(Icons.local_offer), label: 'Descuentos'),
+              const BottomNavigationBarItem(
+                  icon: Icon(Icons.message_rounded), label: 'WhatsApp'),
             ],
             onTap: _handleNavigation, // Usamos la función corregida
           ),
@@ -363,13 +374,14 @@ class _DescuentosPageState extends State<DescuentosPage> {
   }
 
   Widget _buildProductCard(Product producto) {
-    double originalPrice = (producto.priceSale ?? 0).toDouble();
-    double discountPercent = _getProductDiscount(producto);
-    double finalPrice = originalPrice * (1 - discountPercent);
+    double originalPrice = producto.priceSale ?? 0.0;
+    double finalPrice = producto.finalPrice ?? originalPrice;
+    bool hasDiscount = producto.hasDiscount;
+    double discountPercent = producto.savingsPct ?? 0.0;
 
     return Container(
       width: 170,
-      margin: const EdgeInsets.only(right: 12, bottom: 10, left: 2), 
+      margin: const EdgeInsets.only(right: 12, bottom: 10, left: 2),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -387,7 +399,8 @@ class _DescuentosPageState extends State<DescuentosPage> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
                 child: Image.network(
                   producto.image ?? '',
                   height: 120,
@@ -421,7 +434,6 @@ class _DescuentosPageState extends State<DescuentosPage> {
               ),
             ],
           ),
-
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -459,7 +471,6 @@ class _DescuentosPageState extends State<DescuentosPage> {
               ),
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
             child: Row(
@@ -471,7 +482,8 @@ class _DescuentosPageState extends State<DescuentosPage> {
                 ),
                 Text(
                   "${producto.quantity ?? 0}",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 IconButton(
                   icon: Icon(Icons.add_circle, color: verdePrincipal),

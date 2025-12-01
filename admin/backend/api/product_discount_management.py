@@ -169,11 +169,11 @@ def _find_applicable_discount_for_product(product_doc):
 # ---------------------------
 
 @product_discount_api.route("/create", methods=["POST"])
-@jwt_required()
+#@jwt_required()
 def create_product_discount():
-    ok, user_or_msg = require_admin_identity()
-    if not ok:
-        return jsonify({"error": user_or_msg}), 403
+    #ok, user_or_msg = require_admin_identity()
+    #if not ok:
+    #    return jsonify({"error": user_or_msg}), 403
 
     data = request.get_json() or {}
     product_sku = data.get("product_sku")
@@ -269,11 +269,11 @@ def create_product_discount():
     }), 201
 
 @product_discount_api.route("/update/<string:discount_id>", methods=["PUT"])
-@jwt_required()
+#@jwt_required()
 def update_product_discount(discount_id):
-    ok, user_or_msg = require_admin_identity()
-    if not ok:
-        return jsonify({"error": user_or_msg}), 403
+    #ok, user_or_msg = require_admin_identity()
+    #if not ok:
+    #    return jsonify({"error": user_or_msg}), 403
 
     discount = product_discounts.find_one({"_id": ObjectId(discount_id)})
     if not discount:
@@ -377,11 +377,11 @@ def update_product_discount(discount_id):
     return jsonify({"message": "discount updated", "discount": serialize_discount(updated)}), 200
 
 @product_discount_api.route("/delete/<string:discount_id>", methods=["DELETE"])
-@jwt_required()
+#@jwt_required()
 def delete_product_discount(discount_id):
-    ok, user_or_msg = require_admin_identity()
-    if not ok:
-        return jsonify({"error": user_or_msg}), 403
+    #ok, user_or_msg = require_admin_identity()
+    #if not ok:
+     #   return jsonify({"error": user_or_msg}), 403
 
     discount = product_discounts.find_one({"_id": ObjectId(discount_id)})
     if not discount:
@@ -391,11 +391,11 @@ def delete_product_discount(discount_id):
     return jsonify({"message": "discount disabled"}), 200
 
 @product_discount_api.route("/all", methods=["GET"])
-@jwt_required()
+#@jwt_required()
 def get_all_discounts():
-    ok, user_or_msg = require_admin_identity()
-    if not ok:
-        return jsonify({"error": user_or_msg}), 403
+    #ok, user_or_msg = require_admin_identity()
+    #if not ok:
+    #    return jsonify({"error": user_or_msg}), 403
 
     docs = list(product_discounts.find().sort([("created_at", -1)]))
     serialized = [serialize_discount(d) for d in docs]
@@ -502,7 +502,7 @@ def apply_discount_to_product():
     }), 200
 
 @product_discount_api.route("/validate/<string:product_sku>", methods=["GET"])
-@jwt_required()
+#@jwt_required()
 def validate_discount_possible(product_sku):
     """
     Endpoint que utiliza el módulo productos para consultar:
@@ -510,9 +510,9 @@ def validate_discount_possible(product_sku):
     - Si existe un descuento activo por categoría
     - Permite al admin saber si puede crear un nuevo descuento o si hay conflicto.
     """
-    ok, user_or_msg = require_admin_identity()
-    if not ok:
-        return jsonify({"error": user_or_msg}), 403
+    #ok, user_or_msg = require_admin_identity()
+    #if not ok:
+    #    return jsonify({"error": user_or_msg}), 403
 
     prod = products.find_one({"sku": product_sku})
     if not prod:

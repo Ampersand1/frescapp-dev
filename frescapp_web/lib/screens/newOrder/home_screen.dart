@@ -71,41 +71,26 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-Future<void> getInitialProducts() async {
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  final String? userEmail = prefs.getString('user_email');
+  Future<void> getInitialProducts() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? userEmail = prefs.getString('user_email');
 
-  // IMPORTANTE: el backend necesita el string "undefined"
-  final String safeEmail =
-      (userEmail == null || userEmail.isEmpty) ? 'undefined' : userEmail;
+    // IMPORTANTE: el backend necesita el string "undefined"
+    final String safeEmail =
+        (userEmail == null || userEmail.isEmpty) ? 'undefined' : userEmail;
 
-  print("==== EMAIL PARA PETICIÓN ====");
-  print(safeEmail);
+    print("==== EMAIL PARA PETICIÓN ====");
+    print(safeEmail);
 
-  allProducts = await productService.getProducts(safeEmail);
+    allProducts = await productService.getProducts(safeEmail);
 
-  setState(() {
-    displayedProducts = allProducts.toList();
-  });
+    setState(() {
+      displayedProducts = allProducts.toList();
+    });
 
-  loadOrder(widget.order ?? Order());
-}
-
-
-
-  // --- LÓGICA DE DESCUENTOS SIMULADA (Misma que en DescuentosPage) ---
-  double _getProductDiscount(Product product) {
-    if (product.name != null) {
-      if (product.name!.length % 3 == 0) return 0.20;
-      if (product.name!.length % 5 == 0) return 0.10;
-    }
-    return 0.0;
+    loadOrder(widget.order ?? Order());
   }
 
-  double _calculateDiscountedPrice(
-      double originalPrice, double discountPercent) {
-    return originalPrice * (1 - discountPercent);
-  }
   // -------------------------------------
 
   void filterProducts(String query) {
@@ -316,14 +301,10 @@ Future<void> getInitialProducts() async {
                 itemCount: displayedProducts.length,
                 itemBuilder: (context, index) {
                   Product product = displayedProducts[index];
-
-                  double discountPercent = _getProductDiscount(product);
-                  bool hasDiscount = discountPercent > 0;
-                  double originalPrice = (product.priceSale as num).toDouble();
-                  double finalPrice = hasDiscount
-                      ? _calculateDiscountedPrice(
-                          originalPrice, discountPercent)
-                      : originalPrice;
+                  bool hasDiscount = product.hasDiscount;
+                  double discountPercent = product.savingsPct ?? 0.0;
+                  double originalPrice = product.priceSale ?? 0.0;
+                  double finalPrice = product.finalPrice ?? product.priceSale ?? 0.0;
 
                   return ListTile(
                     leading: Stack(
