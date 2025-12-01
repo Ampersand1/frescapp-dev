@@ -360,36 +360,47 @@ def list_product_customer(customer_email):
         "rate_root": 1
     }
 
-    # -------------------------------------
-    # 2. CARGAR PRODUCTOS (RÁPIDO)
-    # -------------------------------------
+    # -----------------------------
+    # 2. CARGAR PRODUCTOS
+    # -----------------------------
     if not customer_email or customer_email.strip().lower() in ["undefined", "null", "none", ""]:
         products_cursor = list(products.find({"status": "active"}, projection))
     else:
         products_cursor = Product.find_for_customer(customer_email)
 
-    # -------------------------------------
-    # 3. CARGAR DESCUENTOS EN UNA SOLA CONSULTA
-    # -------------------------------------
-    active_discounts = list(product_discounts.find({"status": "active"}))
+    # -----------------------------
+    # 3. CARGAR DESCUENTOS ACTIVOS
+    # -----------------------------
+    active_discounts = list(product_discounts.find({"active": True}))
 
-    # indexarlos por SKU para lookup O(1)
-    discount_map = {d["product_sku"]: d for d in active_discounts}
+    # Mapas para búsqueda rápida
+    discount_map_sku = {d["product_sku"]: d for d in active_discounts if d.get("product_sku")}
+    discount_map_category = {d["category"]: d for d in active_discounts if d.get("category")}
 
     result = []
 
-    # -------------------------------------
-    # 4. PROCESAR PRODUCTOS SIN RETRASOS
-    # -------------------------------------
+    # -----------------------------
+    # 4. PROCESAR CADA PRODUCTO
+    # -----------------------------
     for product in products_cursor:
         sku = product.get("sku")
-        discount_doc = discount_map.get(sku)
+        category = product.get("category")
+        discount_doc = None
 
+        # 4a) Prioridad SKU
+        if sku in discount_map_sku and is_discount_active(discount_map_sku[sku]):
+            discount_doc = discount_map_sku[sku]
+
+        # 4b) Si no hay descuento por SKU, buscar por categoría
+        elif category in discount_map_category and is_discount_active(discount_map_category[category]):
+            discount_doc = discount_map_category[category]
+
+        # Base del producto
         base = {
             "id": str(product["_id"]),
             "name": product.get("name"),
             "unit": product.get("unit"),
-            "category": product.get("category"),
+            "category": category,
             "sku": sku,
             "price_sale": product.get("price_sale"),
             "price_purchase": product.get("price_purchase"),
@@ -408,45 +419,34 @@ def list_product_customer(customer_email):
             "rate_root": product.get("rate_root"),
         }
 
-        # -------------------------------------------------
-        # 5. APLICAR DESCUENTO SI EXISTE — CÁLCULO RÁPIDO
-        # -------------------------------------------------
+        # -----------------------------
+        # 5. APLICAR DESCUENTO
+        # -----------------------------
         if discount_doc:
-            # calcula precio final
-            price = base["price_sale"]
-            value = discount_doc.get("value")
-            dtype = discount_doc.get("discount_type")
-
-            if dtype == "percentage":
-                final_price = price - (price * value / 100)
-                savings_pct = value
-            else:
-                final_price = price - value
-                savings_pct = (value / price) * 100 if price else 0
-
+            final_price, savings_pct = compute_final_price(base["price_sale"], discount_doc)
             base.update({
-                "final_price": round(final_price, 2),
-                "has_discount": True,
-                "discount_type": dtype,
-                "discount_value": value,
-                "savings_pct": round(savings_pct, 2)
+                "finalPrice": final_price,
+                "hasDiscount": True,
+                "discountType": discount_doc.get("discount_type"),
+                "discountValue": discount_doc.get("value"),
+                "savingsPct": savings_pct
             })
-
         else:
             base.update({
-                "final_price": base["price_sale"],
-                "has_discount": False,
-                "discount_type": None,
-                "discount_value": None,
-                "savings_pct": 0
+                "finalPrice": base["price_sale"],
+                "hasDiscount": False,
+                "discountType": None,
+                "discountValue": None,
+                "savingsPct": 0.0
             })
 
         result.append(base)
 
-    # -------------------------------------
-    # 6. DEVOLVER RESPONSE JSON INSTANTÁNEO
-    # -------------------------------------
+    # -----------------------------
+    # 6. DEVOLVER JSON
+    # -----------------------------
     return jsonify(result), 200
+
 
 
 @product_api.route('/syn_products_page', methods=['GET'])

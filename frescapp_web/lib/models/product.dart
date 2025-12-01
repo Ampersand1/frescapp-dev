@@ -1,33 +1,28 @@
 class Product {
-  final String? id;
-  final String? name;
-  final String? root;
-  final String? child;
-  final String? unit;
-  final String? category;
-  final String? sku;
+  String? id;
+  String? name;
+  String? unit;
+  String? category;
+  String? sku;
+  double? priceSale;
+  double? pricePurchase;
+  double? discount;
+  double? margen;
+  bool? iva;
+  double? ivaValue;
+  String? description;
+  String? image;
+  String? status;
+  int? quantity;
+  String? root;
+  String? child;
+  String? proveedor;
+  double? stepUnit;
+  double? rateRoot;
 
-  final double? priceSale;
-  final double? pricePurchase;
-  final double? discount;
-  final double? margen;
-  final bool? iva;
-  final double? ivaValue;
-
-  final String? description;
-  final String? image;
-  final String? status;
-  final String? proveedor;
-
-  final double? stepUnit;
-  final double? rateRoot;
-
-  /// CANTIDAD MODIFICABLE
-  double? quantity;
-
-  // Campos para descuentos MODIFICABLES
-  double? finalPrice; // quitamos final
-  bool hasDiscount;   // quitamos final
+  // NUEVOS CAMPOS para descuentos
+  double? finalPrice;
+  bool hasDiscount = false;
   String? discountType;
   double? discountValue;
   double? savingsPct;
@@ -35,8 +30,6 @@ class Product {
   Product({
     this.id,
     this.name,
-    this.root,
-    this.child,
     this.unit,
     this.category,
     this.sku,
@@ -49,102 +42,95 @@ class Product {
     this.description,
     this.image,
     this.status,
+    this.quantity,
+    this.root,
+    this.child,
     this.proveedor,
     this.stepUnit,
     this.rateRoot,
-    this.quantity,
-    double? finalPrice,
+    this.finalPrice,
     this.hasDiscount = false,
     this.discountType,
     this.discountValue,
     this.savingsPct,
-  }) : finalPrice = finalPrice ?? priceSale; // inicializamos por defecto
-
-  /// Conversión robusta a double
-  static double _toDouble(dynamic v) {
-    if (v == null) return 0.0;
-    if (v is double) return v;
-    if (v is int) return v.toDouble();
-    if (v is num) return v.toDouble();
-    if (v is String) return double.tryParse(v) ?? 0.0;
-    return 0.0;
-  }
-
-  /// Conversión segura de IVA
-  static bool? _toBool(dynamic v) {
-    if (v == null) return null;
-    if (v is bool) return v;
-    if (v is int) return v == 1;
-    if (v is String) return v.toLowerCase() == "true";
-    return null;
-  }
+  });
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json["id"] as String?,
-      name: json["name"],
-      root: json["root"],
-      child: json["child"],
-      unit: json["unit"],
-      category: json["category"],
-      sku: json["sku"],
-
-      priceSale: _toDouble(json["price_sale"]),
-      pricePurchase: _toDouble(json["price_purchase"]),
-      discount: _toDouble(json["discount"]),
-      margen: _toDouble(json["margen"]),
-      iva: _toBool(json["iva"]),
-      ivaValue: _toDouble(json["iva_value"]),
-
-      description: json["description"],
-      image: json["image"],
-      status: json["status"],
-      proveedor: json["proveedor"],
-
-      stepUnit: _toDouble(json["step_unit"]),
-      rateRoot: _toDouble(json["rate_root"]),
-      quantity: _toDouble(json["quantity"]),
-
-      finalPrice: _toDouble(json["final_price"] ?? json["price_sale"]),
-      hasDiscount: json["has_discount"] ?? false,
-      discountType: json["discount_type"],
-      discountValue: _toDouble(json["discount_value"]),
-      savingsPct: _toDouble(json["savings_pct"]),
+      id: json['id'] as String?,
+      name: json['name'] as String?,
+      unit: json['unit'] as String?,
+      category: json['category'] as String?,
+      sku: json['sku'] as String?,
+      priceSale: (json['price_sale'] ?? 0).toDouble(),
+      pricePurchase: (json['price_purchase'] ?? 0).toDouble(),
+      discount: (json['discount'] ?? 0).toDouble(),
+      margen: (json['margen'] ?? 0).toDouble(),
+      iva: json['iva'] ?? false,
+      ivaValue: (json['iva_value'] ?? 0).toDouble(),
+      description: json['description'] as String?,
+      image: json['image'] as String?,
+      status: json['status'] as String?,
+      quantity: json['quantity'] ?? 0,
+      root: json['root'] as String?,
+      child: json['child'] as String?,
+      proveedor: json['proveedor'] as String?,
+      stepUnit: (json['step_unit'] ?? 1).toDouble(),
+      rateRoot: (json['rate_root'] ?? 0).toDouble(),
+      // CAMPOS DE DESCUENTO
+      finalPrice: (json['finalPrice'] ?? json['price_sale'] ?? 0).toDouble(),
+      hasDiscount: json['hasDiscount'] ?? false,
+      discountType: json['discountType'] as String?,
+      discountValue: (json['discountValue'] ?? 0).toDouble(),
+      savingsPct: (json['savingsPct'] ?? 0).toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      "id": id,
-      "name": name,
-      "root": root,
-      "child": child,
-      "unit": unit,
-      "category": category,
-      "sku": sku,
-
-      "price_sale": priceSale,
-      "price_purchase": pricePurchase,
-      "discount": discount,
-      "margen": margen,
-      "iva": iva,
-      "iva_value": ivaValue,
-
-      "description": description,
-      "image": image,
-      "status": status,
-      "proveedor": proveedor,
-
-      "step_unit": stepUnit,
-      "rate_root": rateRoot,
-
-      "quantity": quantity,
-
-      "final_price": finalPrice,
-      "has_discount": hasDiscount,
-      "discount_type": discountType,
-      "discount_value": discountValue,
-      "savings_pct": savingsPct,
+      'id': id,
+      'name': name,
+      'unit': unit,
+      'category': category,
+      'sku': sku,
+      'price_sale': priceSale,
+      'price_purchase': pricePurchase,
+      'discount': discount,
+      'margen': margen,
+      'iva': iva,
+      'iva_value': ivaValue,
+      'description': description,
+      'image': image,
+      'status': status,
+      'quantity': quantity,
+      'root': root,
+      'child': child,
+      'proveedor': proveedor,
+      'step_unit': stepUnit,
+      'rate_root': rateRoot,
+      // CAMPOS DE DESCUENTO
+      'finalPrice': finalPrice,
+      'hasDiscount': hasDiscount,
+      'discountType': discountType,
+      'discountValue': discountValue,
+      'savingsPct': savingsPct,
     };
+  }
+
+  // -------------------------
+  // Método para actualizar descuento directamente desde el backend
+  // -------------------------
+  void updateDiscount({
+    double? finalPrice,
+    bool? hasDiscount,
+    String? discountType,
+    double? discountValue,
+    double? savingsPct,
+  }) {
+    this.finalPrice = finalPrice ?? this.finalPrice;
+    this.hasDiscount = hasDiscount ?? this.hasDiscount;
+    this.discountType = discountType ?? this.discountType;
+    this.discountValue = discountValue ?? this.discountValue;
+    this.savingsPct = savingsPct ?? this.savingsPct;
   }
 }

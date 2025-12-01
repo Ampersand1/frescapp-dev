@@ -72,24 +72,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> getInitialProducts() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? userEmail = prefs.getString('user_email');
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final String? userEmail = prefs.getString('user_email');
 
-    // IMPORTANTE: el backend necesita el string "undefined"
-    final String safeEmail =
-        (userEmail == null || userEmail.isEmpty) ? 'undefined' : userEmail;
+  final String safeEmail =
+      (userEmail == null || userEmail.isEmpty) ? 'undefined' : userEmail;
 
-    print("==== EMAIL PARA PETICIÓN ====");
-    print(safeEmail);
+  print("==== EMAIL PARA PETICIÓN ====");
+  print(safeEmail);
 
-    allProducts = await productService.getProducts(safeEmail);
+  // Traemos productos + descuentos ya aplicados
+  allProducts = await productService.getProducts(safeEmail);
 
-    setState(() {
-      displayedProducts = allProducts.toList();
-    });
+  setState(() {
+    displayedProducts = allProducts.toList();
+  });
 
-    loadOrder(widget.order ?? Order());
-  }
+  loadOrder(widget.order ?? Order());
+}
 
   // -------------------------------------
 

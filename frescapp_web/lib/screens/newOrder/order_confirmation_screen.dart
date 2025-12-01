@@ -83,14 +83,14 @@ Future<bool> validateCode(String code, String email) async {
     // Total original de la orden usando priceSale y quantity, garantizando no nulos
     double totalOriginal = products.fold<double>(0.0, (prev, product) {
       double price = product.priceSale ?? 0.0;
-      double qty = product.quantity ?? 1.0;
+      num qty = product.quantity ?? 1.0;
       return prev + (price * qty);
     });
 
     if (totalOriginal > 0.0) {
       for (var product in products) {
         double price = product.priceSale ?? 0.0;
-        double qty = product.quantity ?? 1.0;
+        num qty = product.quantity ?? 1.0;
         double productTotal = price * qty;
         double productDiscount = (productTotal / totalOriginal) * descuento;
         double finalPrice = productTotal - productDiscount;
@@ -103,7 +103,7 @@ Future<bool> validateCode(String code, String email) async {
       // Recalcular total sumando finalPrice de cada producto
       widget.orderDetails.total = products.fold<double>(0.0, (prev, product) {
         double fp = product.finalPrice ?? 0.0;
-        double qty = product.quantity ?? 1.0;
+        num qty = product.quantity ?? 1.0;
         return prev + (fp * qty);
       });
 

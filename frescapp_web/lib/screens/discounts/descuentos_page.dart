@@ -376,7 +376,6 @@ class _DescuentosPageState extends State<DescuentosPage> {
   Widget _buildProductCard(Product producto) {
     double originalPrice = producto.priceSale ?? 0.0;
     double finalPrice = producto.finalPrice ?? originalPrice;
-    bool hasDiscount = producto.hasDiscount;
     double discountPercent = producto.savingsPct ?? 0.0;
 
     return Container(
