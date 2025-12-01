@@ -29,7 +29,6 @@ class OrderConfirmationScreen extends StatefulWidget {
 }
 
 class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
-  final TextEditingController _codeController = TextEditingController();
   late bool _userActive = false;
   final TextEditingController _user = TextEditingController();
   final TextEditingController _nameRestaurant = TextEditingController();
@@ -37,6 +36,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   String? _passwordErrorText;
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +47,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
   Future<Order> getOrderDetailsFromSharedPreferences() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     try {
-      if(prefs.getString('user_id') != null){
+      if (prefs.getString('user_id') != null) {
         final String customerId = prefs.getString('user_id') ?? '';
         final response = await http.get(Uri.parse(
             '${ApiRoutes.baseUrl}${ApiRoutes.customers}/customer/$customerId'));
@@ -60,7 +60,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
           widget.orderDetails.deliveryAddress = userData['address'];
           widget.orderDetails.customerEmail = userData['email'];
           widget.orderDetails.deliveryCost =
-              (prefs.getDouble('delivery_cost') ?? 0) as double?;
+              prefs.getDouble('delivery_cost') ?? 0;
         } else {
           throw Exception('Failed to load user data');
         }
@@ -74,18 +74,47 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
     return widget.orderDetails;
   }
 
-  Future<bool> validateCode(String code, String email) async {
-    final DiscountService discountService = DiscountService();
-    double? descuento =
-        await discountService.validateCode(code, email) as double?;
-    setState(() {
-      widget.orderDetails.discount =
-          ((descuento! / 100) * widget.orderDetails.total!);
-      widget.orderDetails.total =
-          widget.orderDetails.total! - widget.orderDetails.discount!;
+Future<bool> validateCode(String code, String email) async {
+  final DiscountService discountService = DiscountService();
+  double? descuento = await discountService.validateCode(code, email) as double?;
+
+  final products = widget.orderDetails.products;
+  if (descuento != null && products != null && products.isNotEmpty) {
+    // Total original de la orden usando priceSale y quantity, garantizando no nulos
+    double totalOriginal = products.fold<double>(0.0, (prev, product) {
+      double price = product.priceSale ?? 0.0;
+      double qty = product.quantity ?? 1.0;
+      return prev + (price * qty);
     });
-    return widget.orderDetails.discount as double > 0.0;
+
+    if (totalOriginal > 0.0) {
+      for (var product in products) {
+        double price = product.priceSale ?? 0.0;
+        double qty = product.quantity ?? 1.0;
+        double productTotal = price * qty;
+        double productDiscount = (productTotal / totalOriginal) * descuento;
+        double finalPrice = productTotal - productDiscount;
+
+        // Aplicar descuento proporcional
+        product.finalPrice = finalPrice / qty;
+        product.hasDiscount = true;
+      }
+
+      // Recalcular total sumando finalPrice de cada producto
+      widget.orderDetails.total = products.fold<double>(0.0, (prev, product) {
+        double fp = product.finalPrice ?? 0.0;
+        double qty = product.quantity ?? 1.0;
+        return prev + (fp * qty);
+      });
+
+      // Guardar descuento global
+      widget.orderDetails.discount = descuento;
+    }
   }
+
+  setState(() {});
+  return (widget.orderDetails.discount ?? 0.0) > 0.0;
+}
 
   String generateOrderNumber() {
     Random random = Random();
@@ -548,36 +577,39 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                 },
               ),
               if (!_userActive) const SizedBox(height: 16),
-              if (!_userActive) TextFormField(
-                controller: _user,
-                decoration: const InputDecoration(
-                  labelText: 'Usuario',
-                  border: OutlineInputBorder(),
+              if (!_userActive)
+                TextFormField(
+                  controller: _user,
+                  decoration: const InputDecoration(
+                    labelText: 'Usuario',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
               if (!_userActive) const SizedBox(height: 16),
-              if (!_userActive) TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña',
-                  border: OutlineInputBorder(),
+              if (!_userActive)
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Contraseña',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.next,
                 ),
-                keyboardType: TextInputType.visiblePassword,
-                textInputAction: TextInputAction.next,
-              ),
               if (!_userActive) const SizedBox(height: 16),
-              if (!_userActive) TextField(
-                controller: _confirmPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Confirmar Contraseña',
-                  border: const OutlineInputBorder(),
-                  errorText: _passwordErrorText,
+              if (!_userActive)
+                TextField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirmar Contraseña',
+                    border: const OutlineInputBorder(),
+                    errorText: _passwordErrorText,
+                  ),
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.done,
                 ),
-                keyboardType: TextInputType.visiblePassword,
-                textInputAction: TextInputAction.done,
-              ),
             ],
           );
         }

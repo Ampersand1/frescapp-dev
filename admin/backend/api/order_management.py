@@ -23,94 +23,125 @@ from ..models.product import Product
 from ..models.customer import Customer
 from ..models.route import Route
 import os,re
+from .product_discount_management import _find_applicable_discount_for_product, compute_final_price
 
 
 order_api = Blueprint('order', __name__)
+
 
 @order_api.route('/order', methods=['POST'])
 @order_api.route('/order/<string:order_number>', methods=['POST'])
 def create_order(order_number=None):
     data = request.get_json()
-    id = data.get('id', None)
+    if not data:
+        return jsonify({'message': 'No data provided'}), 400
+
+    # Información del cliente y orden
+    id = data.get('id')
     order_number = data.get('order_number', order_number)
     customer_email = data.get('email') or data.get('customer_email') or ''
-    customer_phone = data.get('phoneNumber') or data.get('customer_phone')  or ''
+    customer_phone = data.get('phoneNumber') or data.get('customer_phone') or ''
     customer_documentNumber = data.get('documentNumber') or data.get('customer_documentNumber') or ''
     customer_documentType = data.get('documentType') or data.get('customer_documentType') or ''
-    customer_name = data.get('customerName') or data.get('customer_name')  or ''
+    customer_name = data.get('customerName') or data.get('customer_name') or ''
     delivery_date = data.get('deliveryDate') or data.get('delivery_date') or ''
     status = data.get('status') or 'Creada'
-    created_at = data.get('created_at', None)
-    updated_at = data.get('updated_at', None)
+    created_at = data.get('created_at')
+    updated_at = data.get('updated_at')
     products = data.get('products', [])
-    total = data.get('total', 0.0)
+
+    if not customer_email or not delivery_date:
+        return jsonify({'message': 'Missing required fields'}), 400
+
+    # Obtener datos del cliente
+    customer = Customer.find_by_email(customer_email)
+    open_hour_customer = customer.get('open_hour', '') if customer else ''
+
+    # --- Aplicar descuentos activos a cada producto ---
+    total = 0.0
+    for product in products:
+        discount, origin = _find_applicable_discount_for_product(product)
+        original_price = float(product.get('price_sale', 0))
+        if discount:
+            final_price, _ = compute_final_price(original_price, discount)
+            product['price_sale'] = final_price
+            product['applied_discount'] = {
+                "discount_id": str(discount["_id"]),
+                "discount_type": discount.get("discount_type"),
+                "value": discount.get("value"),
+                "origin": origin
+            }
+        else:
+            product['applied_discount'] = None
+        quantity = float(product.get('quantity', 1))
+        total += product['price_sale'] * quantity
+
+    # Otros campos de la orden
     paymentMethod = data.get('paymentMethod', 'Cash')
     deliveryAddress = data.get('deliveryAddress', 'Default Address')
     deliveryAddressDetails = data.get('deliveryAddressDetails') or ''
     deliveryCost = data.get('deliveryCost', 0.0)
-    discount = data.get("discount", 0.0)
+    discount_value = data.get("discount", 0.0)
     alegra_id = data.get('alegra_id','000')
     deliverySlot = data.get('deliverySlot', '09:00-12:00')
-    open_hour = data.get('open_hour', '')
-    payment_date = data.get('payment_date', delivery_date) 
+    payment_date = data.get('payment_date', delivery_date)
     driver_name = data.get('driver_name', '')
     seller_name = data.get('seller_name', '')
     source = data.get('source', 'Aplicación')
     totalPayment = 0.0
     status_payment = data.get('status_payment', 'Pendiente') or 'Pendiente'
-    if not customer_email or not delivery_date:
-        return jsonify({'message': 'Missing required fields'}), 400
-    customer = Customer.find_by_email(customer_email)
-    try:
-        open_hour_customer = customer.get('open_hour','') or ''
-    except:
-        open_hour_customer  =''
+
+    # Crear objeto Order
     order = Order(      
-        id = id,  
-        order_number = order_number,
-        customer_email = customer_email,
-        customer_phone = customer_phone,
-        customer_documentNumber = customer_documentNumber.split('-')[0],
-        customer_documentType = customer_documentType,
-        customer_name = customer_name.capitalize(),
-        delivery_date = delivery_date,
-        status = status,
-        created_at = created_at,
-        updated_at = updated_at,
-        products = products,
-        total = total,
-        deliverySlot = deliverySlot,
-        paymentMethod = paymentMethod,
-        deliveryAddress = deliveryAddress,
-        deliveryAddressDetails = deliveryAddressDetails,
-        deliveryCost = deliveryCost,
-        discount=discount,
-        alegra_id = alegra_id,
+        id=id,
+        order_number=order_number,
+        customer_email=customer_email,
+        customer_phone=customer_phone,
+        customer_documentNumber=customer_documentNumber.split('-')[0],
+        customer_documentType=customer_documentType,
+        customer_name=customer_name.capitalize(),
+        delivery_date=delivery_date,
+        status=status,
+        created_at=created_at,
+        updated_at=updated_at,
+        products=products,
+        total=total,
+        deliverySlot=deliverySlot,
+        paymentMethod=paymentMethod,
+        deliveryAddress=deliveryAddress,
+        deliveryAddressDetails=deliveryAddressDetails,
+        deliveryCost=deliveryCost,
+        discount=discount_value,
+        alegra_id=alegra_id,
         open_hour=open_hour_customer,
         payment_date=payment_date,
         driver_name=driver_name,
         seller_name=seller_name,
         source=source,
-        totalPayment=0.0,
+        totalPayment=totalPayment,
         status_payment=status_payment
     )
-    finded_order = Order.find_by_order_number(order_number=order_number)
-    ruta = Route.find_by_date(delivery_date)
-    if finded_order:
+
+    # Guardar o actualizar orden
+    existing_order = Order.find_by_order_number(order_number)
+    if existing_order:
         order.updated()
     else:
         order.save()
         send_order_email(order_number, customer_email, delivery_date, products, total)
+
+    # Actualizar ruta si existe
+    ruta = Route.find_by_date(delivery_date)
     if ruta:
-        for stop in ruta.get('stops'):
+        for stop in ruta.get('stops', []):
             if stop["order_number"] == order_number:
-                stop["total_charged"] = sum(item['price_sale'] * item['quantity'] for item in order.products)
-                stop["total_to_charge"] = sum(item['price_sale'] * item['quantity'] for item in order.products)
-                stop["quantity_sku"] = len(order.products)
-                stop["payment_method"] = order.paymentMethod
-                stop["payment_date"] = order.payment_date
-                stop["address"] = order.deliveryAddress
-                stop["driver_name"] = order.driver_name
+                stop["total_charged"] = sum(item['price_sale'] * item.get('quantity',1) for item in products)
+                stop["total_to_charge"] = sum(item['price_sale'] * item.get('quantity',1) for item in products)
+                stop["quantity_sku"] = len(products)
+                stop["payment_method"] = paymentMethod
+                stop["payment_date"] = payment_date
+                stop["address"] = deliveryAddress
+                stop["driver_name"] = driver_name
         route_exist = Route(
             id=ruta['id'],
             route_number=ruta.get('route_number'),
@@ -119,7 +150,14 @@ def create_order(order_number=None):
             stops=ruta.get('stops')
         )
         route_exist.update()
-    return jsonify({'message': 'Order created successfully'}), 201
+
+    return jsonify({
+        'message': 'Order created successfully',
+        'total': total,
+        'products': products
+    }), 201
+
+
 @order_api.route('/order/<string:id>', methods=['DELETE'])
 def delete_order(id=None):
     # Buscar la orden por su ID
@@ -489,142 +527,100 @@ def send_order_email(order_number, customer_email, delivery_date, products, tota
 
 @order_api.route('/orders/csv', methods=['GET'])
 def download_orders_csv():
-    # Obtener todas las órdenes
     orders_cursor = Order.objects()
-
-    # Crear un objeto StringIO para escribir el CSV en memoria
     csv_file = StringIO()
     csv_writer = csv.writer(csv_file)
 
-    # Escribir la cabecera del CSV
+    # Cabecera
     csv_writer.writerow([
-        "Order ID"
-        , "Order Number"
-        , "Customer Email"
-        , "Customer Phone"
-        ,"Customer Document Number"
-        , "Customer Document Type"
-        , "Customer Name"
-        ,"Delivery Date"
-        , "Status"
-        , "Created At"
-        , "Updated At"
-        , "Total"
-        , "Delivery Slot"
-        , "Payment Method"
-       , "Delivery Address"
-        , "Delivery Address Details"
-        ,"Product SKU"
-        , "Product Name"
-        , "Product Description"
-        , "Product Quantity"
-        ,"Product Price Sale"
-        , "Product Price Purchase"
-        , "Product Category"
-        , "Product Root"
-        , "Product Child"
-        , "Product Discount"
-        , "Product Margen"
-        , "Product IVA"
-        , "Product IVA Value"
-        , "Product Status"
-        , "Product Proveedor"
-        , "Product Step Unit"
+        "Order ID", "Order Number", "Customer Email", "Customer Phone",
+        "Customer Document Number", "Customer Document Type", "Customer Name",
+        "Delivery Date", "Status", "Created At", "Updated At", "Total",
+        "Delivery Slot", "Payment Method", "Delivery Address", "Delivery Address Details",
+        "Product SKU", "Product Name", "Product Description", "Product Quantity",
+        "Product Price Sale", "Product Price Purchase", "Product Category", "Product Root",
+        "Product Child", "Product Discount", "Product Applied Discount",
+        "Product Margen", "Product IVA", "Product IVA Value", "Product Status",
+        "Product Proveedor", "Product Step Unit"
     ])
 
-    # Escribir los datos de las órdenes y productos
     for order in orders_cursor:
         order_id = str(order["_id"])
-        order_number = order["order_number"] if order["order_number"] else order["orderNumber"]
-        customer_email = order["customer_email"] if order["customer_email"] else order["customerEmail"]
-        customer_phone = order["customer_phone"] if order["customer_phone"] else order["customerPhone"]
+        order_number = order.get("order_number") or order.get("orderNumber")
+        customer_email = order.get("customer_email") or order.get("customerEmail")
+        customer_phone = order.get("customer_phone") or order.get("customerPhone")
         customer_document_number = order.get("customer_documentNumber", order.get("customerDocumentNumber", "N/A"))
         customer_document_type = order.get("customer_documentType", order.get("customerDocumentType", "N/A"))
-        customer_name = order["customer_name"] if order["customer_name"] else order["customerName"]
-        delivery_date = order["delivery_date"] if order["delivery_date"] else order["deliveryDate"]
-        status = order["status"]
-        created_at = order["created_at"]
-        updated_at = order["updated_at"]
-        total = order["total"]
-        delivery_slot = order["deliverySlot"]
-        payment_method = order["paymentMethod"]
-        delivery_address = order["deliveryAddress"]
-        delivery_address_details = order["deliveryAddressDetails"]
+        customer_name = order.get("customer_name") or order.get("customerName")
+        delivery_date = order.get("delivery_date") or order.get("deliveryDate")
+        status = order.get("status")
+        created_at = order.get("created_at")
+        updated_at = order.get("updated_at")
+        total = order.get("total")
+        delivery_slot = order.get("deliverySlot")
+        payment_method = order.get("paymentMethod")
+        delivery_address = order.get("deliveryAddress")
+        delivery_address_details = order.get("deliveryAddressDetails")
 
         for product in order["products"]:
             product_sku = product.get("sku", "")
-            product_quantity = product.get("quantity", "")
-            product_price_sale = product.get("price_sale", "")
-            
-            # Buscar el producto en la colección de productos usando el SKU
-            product_data = Product.find_by_sku(sku=product_sku)
-            if product_data:
-                product_name = product_data["name"]
-                product_description = product_data["description"]
-                product_price_purchase = product_data["price_purchase"]
-                product_category = product_data["category"]
-                product_root = product_data["root"]
-                product_child = product_data["child"]
-                product_discount = product_data["discount"]
-                product_margen = product_data["margen"]
-                product_iva = product_data["iva"]
-                product_iva_value = product_data["iva_value"]
-                product_status = product_data["status"]
-                product_proveedor = product_data["proveedor"]
-                product_step_unit = product_data["step_unit"]
-            else:
-                product_name = "Unknown"
-                product_description = "Unknown"
-                product_price_purchase = "N/A"
-                product_category = "N/A"
-                product_root = "N/A"
-                product_child = "N/A"
-                product_discount = "N/A"
-                product_margen = "N/A"
-                product_iva = "N/A"
-                product_iva_value = "N/A"
-                product_status = "N/A"
-                product_proveedor = "N/A"
-                product_step_unit = "N/A"
+            product_quantity = product.get("quantity", 1)
+            product_price_sale = float(product.get('price_sale', 0))
+            applied_discount = product.get('applied_discount', None)
+
+            # Datos del producto desde la colección
+            product_data = Product.find_by_sku(sku=product_sku) or {}
+            product_name = product_data.get("name", "Unknown")
+            product_description = product_data.get("description", "Unknown")
+            product_price_purchase = product_data.get("price_purchase", 0)
+            product_category = product_data.get("category", "N/A")
+            product_root = product_data.get("root", "N/A")
+            product_child = product_data.get("child", "N/A")
+            product_discount = product_data.get("discount", 0)
+            product_margen = product_data.get("margen", 0)
+            product_iva = product_data.get("iva", True)
+            product_iva_value = product_data.get("iva_value", 0)
+            product_status = product_data.get("status", "")
+            product_proveedor = product_data.get("proveedor", "")
+            product_step_unit = product_data.get("step_unit", 1)
 
             csv_writer.writerow([
-                order_id
-                , order_number
-                , customer_email
-                , customer_phone
-                , customer_document_number
-                , customer_document_type
-                , customer_name
-                , delivery_date
-                , status
-                , created_at
-                , updated_at
-                , total
-                , delivery_slot
-                , payment_method
-                , delivery_address
-                , delivery_address_details
-                , product_sku
-                , product_name
-                , product_description
-                , product_quantity
-                , product_price_sale
-                , product_price_purchase
-                , product_category
-                , product_root
-                , product_child
-                , product_discount
-                , product_margen
-                , product_iva
-                , product_iva_value
-                , product_status
-                , product_proveedor
-                , product_step_unit                
+                order_id,
+                order_number,
+                customer_email,
+                customer_phone,
+                customer_document_number,
+                customer_document_type,
+                customer_name,
+                delivery_date,
+                status,
+                created_at,
+                updated_at,
+                total,
+                delivery_slot,
+                payment_method,
+                delivery_address,
+                delivery_address_details,
+                product_sku,
+                product_name,
+                product_description,
+                product_quantity,
+                product_price_sale,
+                product_price_purchase,
+                product_category,
+                product_root,
+                product_child,
+                product_discount,
+                applied_discount,
+                product_margen,
+                product_iva,
+                product_iva_value,
+                product_status,
+                product_proveedor,
+                product_step_unit
             ])
 
     csv_file.seek(0)
-
-    # Crear una respuesta y añadir los headers adecuados
     response = Response(csv_file.getvalue(), mimetype='text/csv')
     response.headers['Content-Disposition'] = 'inline; filename=orders.csv'
     return response

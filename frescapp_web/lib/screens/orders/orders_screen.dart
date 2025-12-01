@@ -10,8 +10,6 @@ import 'package:url_launcher/url_launcher_string.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
-
 class OrdersScreen extends StatefulWidget {
   final Order? order;
   const OrdersScreen({super.key, this.order});
@@ -38,7 +36,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
       String phone = prefs.getString('user_phone') ?? '';
       String contactPhone = prefs.getString('contact_phone') ?? '';
 
-      String message = 'Hola, soy $name y mis datos son:\nEmail: $email\nTeléfono: $phone. Tengo la siguiente duda.';
+      String message =
+          'Hola, soy $name y mis datos son:\nEmail: $email\nTeléfono: $phone. Tengo la siguiente duda.';
 
       // Codificar el mensaje para que se pueda enviar correctamente en la URL
       String encodedMessage = Uri.encodeComponent(message);
@@ -68,7 +67,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
       String userEmail = prefs.getString('user_email') ?? '';
       List<Order>? fetchedOrders = await orderService.getOrders(userEmail);
       if (fetchedOrders.isNotEmpty) {
-        fetchedOrders.sort((a, b) => b.deliveryDate!.compareTo(a.deliveryDate as String));
+        fetchedOrders.sort(
+            (a, b) => b.deliveryDate!.compareTo(a.deliveryDate as String));
         setState(() {
           orders = fetchedOrders;
         });
@@ -105,14 +105,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
       );
     }
   }
-void _editOrder(BuildContext context, Order order) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => HomeScreen(order: order),
-    ),
-  );
-}
+
+  void _editOrder(BuildContext context, Order order) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HomeScreen(order: order),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -217,7 +218,8 @@ void _editOrder(BuildContext context, Order order) {
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                               TextSpan(
-                                text: DateFormat('yyyy-MM-dd hh:mm a').format(DateTime.parse(order.createdAt!)),
+                                text: DateFormat('yyyy-MM-dd hh:mm a')
+                                    .format(DateTime.parse(order.createdAt!)),
                               ),
                             ],
                           ),
@@ -276,45 +278,78 @@ void _editOrder(BuildContext context, Order order) {
                                   child: Column(
                                     children: [
                                       Text('# Orden: ${order.orderNumber}'),
-                                      Text('Método de Pago: ${order.paymentMethod}'),
-                                      Text('Horario de Entrega: ${order.deliverySlot}'),
-                                      Text('Fecha de Entrega: ${order.deliveryDate}'),
-                                      Text('Total: \$ ${NumberFormat('#,###').format(order.total)}'),
+                                      Text(
+                                          'Método de Pago: ${order.paymentMethod}'),
+                                      Text(
+                                          'Horario de Entrega: ${order.deliverySlot}'),
+                                      Text(
+                                          'Fecha de Entrega: ${order.deliveryDate}'),
+                                      Text(
+                                          'Total: \$ ${NumberFormat('#,###').format(order.total)}'),
                                       ListView.builder(
                                         shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
                                         itemCount: order.products?.length,
                                         itemBuilder: (context, index) {
-                                          final List<Product> product = order.products!.cast<Product>();
+                                          final List<Product> product =
+                                              order.products!.cast<Product>();
+                                          final double priceToShow =
+                                              product[index].finalPrice ??
+                                                  product[index].priceSale ??
+                                                  0;
+
                                           return ListTile(
                                             leading: CircleAvatar(
-                                                backgroundColor: Colors.white,
-                                                backgroundImage: NetworkImage('https://buyfrescapp.com/images/${product[index].sku}.png'),
+                                              backgroundColor: Colors.white,
+                                              backgroundImage: NetworkImage(
+                                                  'https://buyfrescapp.com/images/${product[index].sku}.png'),
                                             ),
                                             title: RichText(
                                               text: TextSpan(
                                                 children: [
                                                   TextSpan(
-                                                    text: '${product[index].name}',
+                                                    text:
+                                                        '${product[index].name}',
                                                     style: const TextStyle(
-                                                      fontWeight: FontWeight.normal,
-                                                      color: Colors.black,
-                                                    ),
+                                                        fontWeight:
+                                                            FontWeight.normal,
+                                                        color: Colors.black),
                                                   ),
-
+                                                  if (product[index]
+                                                      .hasDiscount) ...[
+                                                    const TextSpan(
+                                                        text:
+                                                            '\nPrecio Original: ',
+                                                        style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color:
+                                                                Colors.black)),
+                                                    TextSpan(
+                                                      text:
+                                                          '\$ ${NumberFormat('#,###').format(product[index].priceSale ?? 0)}',
+                                                      style: const TextStyle(
+                                                        decoration:
+                                                            TextDecoration
+                                                                .lineThrough,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
+                                                  ],
                                                   const TextSpan(
-                                                    text: '\nPrecio: ',
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
+                                                      text: '\nPrecio: ',
+                                                      style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Colors.black)),
                                                   TextSpan(
-                                                    text: '\$ ${NumberFormat('#,###').format(product[index].priceSale)}',
+                                                    text:
+                                                        '\$ ${NumberFormat('#,###').format(priceToShow)}',
                                                     style: const TextStyle(
-                                                      fontWeight: FontWeight.normal,
-                                                      color: Colors.black,
-                                                    ),
+                                                        fontWeight:
+                                                            FontWeight.normal,
+                                                        color: Colors.black),
                                                   ),
                                                 ],
                                               ),
@@ -323,21 +358,24 @@ void _editOrder(BuildContext context, Order order) {
                                               text: TextSpan(
                                                 children: [
                                                   const TextSpan(
-                                                    text: 'Cantidad: ',
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
+                                                      text: 'Cantidad: ',
+                                                      style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Colors.black)),
                                                   TextSpan(
-                                                    text: product[index].quantity.toString(),
+                                                      text: product[index]
+                                                          .quantity
+                                                          .toString(),
+                                                      style: const TextStyle(
+                                                          color: Colors.black)),
+                                                  TextSpan(
+                                                    text:
+                                                        '\nSubtotal \$ ${NumberFormat('#,###').format(priceToShow * (product[index].quantity ?? 1))}',
                                                     style: const TextStyle(
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                                  TextSpan(
-                                                    text: '\nSubtotal \$ ${NumberFormat('#,###').format((product[index].priceSale ?? 0) * (product[index].quantity ?? 0))}',
-                                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.black),
                                                   ),
                                                 ],
                                               ),
@@ -359,48 +397,54 @@ void _editOrder(BuildContext context, Order order) {
                               ),
                               IconButton(
                                 onPressed: () {
-                                  _viewPDF(context,'https://app.buyfrescapp.com:5000/api/order/generate_pdf/${order.id}');
-                                }
-                                ,
-                                  icon: const Column(
-                                    children: [
-                                      Icon(Icons.receipt,color: Colors.green),
-                                      Text('Remisión'), // Texto del botón
-                                    ],
-                                  ),
+                                  _viewPDF(context,
+                                      'https://app.buyfrescapp.com:5000/api/order/generate_pdf/${order.id}');
+                                },
+                                icon: const Column(
+                                  children: [
+                                    Icon(Icons.receipt, color: Colors.green),
+                                    Text('Remisión'), // Texto del botón
+                                  ],
+                                ),
                               ),
-                                  IconButton(
-                                    onPressed: order.status == ''
-                                        ? () {
-                                            _editOrder(context, order); // Llama a la función para editar la orden
-                                          }
-                                        : null,
-                                    icon: Column(
-                                      children: [
-                                        Icon(
-                                          Icons.description,
-                                          color: order.status == '' ? Colors.green : Colors.grey,
-                                        ), // Icono para editar
-                                        const Text('Factura'), // Texto del botón
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: order.status == 'Creada'
-                                        ? () {
-                                            _editOrder(context, order); // Llama a la función para editar la orden
-                                          }
-                                        : null,
-                                    icon: Column(
-                                      children: [
-                                        Icon(
-                                          Icons.edit,
-                                          color: order.status == 'Creada' ? Colors.green : Colors.grey,
-                                        ), // Icono para editar
-                                        const Text('Editar'), // Texto del botón
-                                      ],
-                                    ),
-                                  ),
+                              IconButton(
+                                onPressed: order.status == ''
+                                    ? () {
+                                        _editOrder(context,
+                                            order); // Llama a la función para editar la orden
+                                      }
+                                    : null,
+                                icon: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.description,
+                                      color: order.status == ''
+                                          ? Colors.green
+                                          : Colors.grey,
+                                    ), // Icono para editar
+                                    const Text('Factura'), // Texto del botón
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: order.status == 'Creada'
+                                    ? () {
+                                        _editOrder(context,
+                                            order); // Llama a la función para editar la orden
+                                      }
+                                    : null,
+                                icon: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.edit,
+                                      color: order.status == 'Creada'
+                                          ? Colors.green
+                                          : Colors.grey,
+                                    ), // Icono para editar
+                                    const Text('Editar'), // Texto del botón
+                                  ],
+                                ),
+                              ),
                             ],
                           );
                         },
@@ -413,8 +457,10 @@ void _editOrder(BuildContext context, Order order) {
       bottomNavigationBar: SafeArea(
         child: BottomNavigationBar(
           currentIndex: 1,
-          selectedItemColor: Colors.lightGreen.shade900, // Color de los iconos seleccionados
-          unselectedItemColor: Colors.grey, // Color de los iconos no seleccionados
+          selectedItemColor:
+              Colors.lightGreen.shade900, // Color de los iconos seleccionados
+          unselectedItemColor:
+              Colors.grey, // Color de los iconos no seleccionados
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home),
@@ -438,19 +484,22 @@ void _editOrder(BuildContext context, Order order) {
               case 0:
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => HomeScreen(order: widget.order)),
+                  MaterialPageRoute(
+                      builder: (context) => HomeScreen(order: widget.order)),
                 );
                 break;
               case 1:
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => OrdersScreen(order: widget.order)),
+                  MaterialPageRoute(
+                      builder: (context) => OrdersScreen(order: widget.order)),
                 );
                 break;
               case 2:
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ProfileScreen(order: widget.order)),
+                  MaterialPageRoute(
+                      builder: (context) => ProfileScreen(order: widget.order)),
                 );
                 break;
               case 3:
