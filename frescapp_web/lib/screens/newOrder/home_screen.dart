@@ -15,6 +15,7 @@ import 'package:frescapp/services/config_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:frescapp/screens/discounts/descuentos_page.dart';
+import 'package:frescapp/utils/cart_sync.dart';
 
 // ignore: must_be_immutable
 class HomeScreen extends StatefulWidget {
@@ -30,7 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Product> displayedProducts = [];
   late bool _userActive = false;
   List<Product> allProducts = [];
-  List<Product> productsInCart = [];
   late String userAddress = '';
   late String name = 'Frescapp';
   late num productCounter = 0;
@@ -72,24 +72,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> getInitialProducts() async {
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  final String? userEmail = prefs.getString('user_email');
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? userEmail = prefs.getString('user_email');
 
-  final String safeEmail =
-      (userEmail == null || userEmail.isEmpty) ? 'undefined' : userEmail;
+    final String safeEmail =
+        (userEmail == null || userEmail.isEmpty) ? 'undefined' : userEmail;
 
-  print("==== EMAIL PARA PETICIÓN ====");
-  print(safeEmail);
+    print("==== EMAIL PARA PETICIÓN ====");
+    print(safeEmail);
 
-  // Traemos productos + descuentos ya aplicados
-  allProducts = await productService.getProducts(safeEmail);
+    // Traemos productos + descuentos ya aplicados
+    allProducts = await productService.getProducts(safeEmail);
 
-  setState(() {
-    displayedProducts = allProducts.toList();
-  });
+    setState(() {
+      displayedProducts = allProducts.toList();
+      syncProducts(allProducts, order);
+    });
 
-  loadOrder(widget.order ?? Order());
-}
+    loadOrder(widget.order ?? Order());
+  }
 
   // -------------------------------------
 
@@ -122,24 +123,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void increaseQuantity(Product product) {
     setState(() {
-      product.quantity = (product.quantity! + 1);
+      product.quantity = (product.quantity ?? 0) + 1;
+      updateOrder(product);
       productCounter++;
-      if (!productsInCart.contains(product)) {
-        productsInCart.add(product);
-      }
     });
   }
 
   void decreaseQuantity(Product product) {
     setState(() {
-      if (product.quantity! > 0) {
-        product.quantity = (product.quantity! - 1);
+      if ((product.quantity ?? 0) > 0) {
+        product.quantity = (product.quantity ?? 0) - 1;
+        updateOrder(product);
         productCounter--;
-        if (product.quantity == 0) {
-          productsInCart.remove(product);
-        }
       }
     });
+  }
+
+  void updateOrder(Product product) {
+    if (order.products == null) order.products = [];
+
+    int index = order.products!.indexWhere((p) => p.sku == product.sku);
+
+    if (index != -1) {
+      if ((product.quantity ?? 0) > 0) {
+        order.products![index].quantity = product.quantity;
+      } else {
+        order.products!.removeAt(index);
+      }
+    } else if ((product.quantity ?? 0) > 0) {
+      order.products!.add(product);
+    }
   }
 
   void updateCounter(int value) {
@@ -163,7 +176,6 @@ class _HomeScreenState extends State<HomeScreen> {
           product.quantity = 0;
         }
       }
-      productsInCart = widget.order!.products!;
     }
     // Lógica original de carga de usuario...
     else if (widget.order == null) {
@@ -191,7 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       // Actualizar contador
       productCounter =
-          productsInCart.fold(0, (sum, item) => sum + (item.quantity ?? 0));
+          order.products?.fold(0, (sum, item) => sum! + (item.quantity ?? 0)) ??
+              0;
       userAddress = order.deliveryAddress ?? '';
       name = order.customerName ?? 'Frescapp';
       displayedProducts = allProducts.toList();
@@ -246,11 +259,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Función auxiliar para preparar la orden antes de navegar
-  void _prepareOrderForNavigation() {
-    widget.order?.products = productsInCart;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -261,20 +269,24 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.shopping_cart),
             onPressed: () {
               // Sincronizamos antes de ir al carrito
-              _prepareOrderForNavigation();
+              order = syncOrderProducts(allProducts, order);
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => CartScreen(
-                    productsInCart: productsInCart,
+                    productsInCart: order.products ?? [],
                     updateCounter: updateCounter,
-                    order: widget.order ?? Order(),
+                    order: order,
                   ),
                 ),
               ).then((_) {
                 setState(() {
-                  productCounter = productsInCart.fold(
-                      0, (sum, item) => sum + (item.quantity ?? 0));
+                  syncProducts(allProducts, order);
+                  productCounter = order.products?.fold(
+                        0,
+                        (sum, item) => sum! + (item.quantity ?? 0),
+                      ) ??
+                      0;
                 });
               });
             },
@@ -304,7 +316,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   bool hasDiscount = product.hasDiscount;
                   double discountPercent = product.savingsPct ?? 0.0;
                   double originalPrice = product.priceSale ?? 0.0;
-                  double finalPrice = product.finalPrice ?? product.priceSale ?? 0.0;
+                  double finalPrice =
+                      product.finalPrice ?? product.priceSale ?? 0.0;
 
                   return ListTile(
                     leading: Stack(
@@ -631,7 +644,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
           onTap: (int index) {
             // IMPORTANTE: Sincronizar el estado del carrito antes de salir del Home
-            _prepareOrderForNavigation();
+            order = syncOrderProducts(allProducts, order);
 
             List<VoidCallback> activeActions = [];
 
@@ -639,15 +652,14 @@ class _HomeScreenState extends State<HomeScreen> {
             activeActions.add(() => Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => HomeScreen(order: widget.order))));
+                    builder: (context) => HomeScreen(order: order))));
 
             // 2. Pedidos (si activo)
             if (_userActive) {
               activeActions.add(() => Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          OrdersScreen(order: widget.order))));
+                      builder: (context) => OrdersScreen(order: order))));
             }
 
             // 3. Login (si inactivo) o Perfil (si activo)
@@ -658,16 +670,14 @@ class _HomeScreenState extends State<HomeScreen> {
               activeActions.add(() => Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          ProfileScreen(order: widget.order))));
+                      builder: (context) => ProfileScreen(order: order))));
             }
 
             // 4. Descuentos (AQUI ESTABA EL ERROR, AHORA SE PASA EL ORDER)
             activeActions.add(() => Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                    builder: (context) =>
-                        DescuentosPage(order: widget.order))));
+                    builder: (context) => DescuentosPage(order: order))));
 
             // 5. WhatsApp
             activeActions.add(() => _openWhatsApp(context));
