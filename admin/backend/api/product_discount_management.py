@@ -48,7 +48,6 @@ def parse_optional_date(value):
             return None
 
 def is_discount_active(d):
-    """Comprueba flag active y rango de fechas si aplica."""
     if not d:
         return False
     if not d.get("active", True):
@@ -65,44 +64,52 @@ def is_discount_active(d):
 def compute_final_price(product_price, discount):
     """
     Devuelve (final_price, savings_pct)
-    savings_pct es porcentaje (por ejemplo 20.0 para 20%).
+    savings_pct es porcentaje (0–100)
     """
     if discount is None:
         return product_price, 0.0
 
     d_type = discount.get("discount_type")
     val = discount.get("value")
+
+    # Normalización segura del valor
+    try:
+        val = float(val)
+    except:
+        return product_price, 0.0
+
+    if val <= 0:
+        return product_price, 0.0
+
+    # ----------------------------
+    # FIX PARA PRECIO FINAL (fixed)
+    # ----------------------------
     if d_type == "fixed":
-        try:
-            final = float(val)
-            if product_price and product_price > 0:
-                savings_pct = (1 - (final / float(product_price))) * 100
-            else:
-                savings_pct = 0.0
-            return round(final, 2), round(savings_pct, 2)
-        except Exception:
-            return product_price, 0.0
-    elif d_type == "percentage":
-        try:
-            pct = float(val)
-            pct = max(0.0, min(pct, 100.0))
-            final = float(product_price) * (1 - (pct / 100.0))
-            return round(final, 2), round(pct, 2)
-        except Exception:
-            return product_price, 0.0
-    else:
-        try:
-            pct = float(val)
-            final = float(product_price) * (1 - (pct / 100.0))
-            return round(final, 2), round(pct, 2)
-        except Exception:
-            return product_price, 0.0
+        # No permitir precios finales mayores al original o negativos
+        if val > product_price:
+            final = product_price
+            savings_pct = 0.0
+        else:
+            final = max(0.0, val)
+            savings_pct = (1 - final / product_price) * 100 if product_price > 0 else 0.0
+
+        final = round(final, 2)
+        savings_pct = round(max(0.0, min(savings_pct, 100.0)), 2)
+        return final, savings_pct
+
+    # ----------------------------
+    # FIX PARA PORCENTAJE (percentage)
+    # ----------------------------
+    if d_type == "percentage":
+        pct = max(0.0, min(val, 100.0))  # limitar 0-100
+        final = product_price * (1 - pct / 100.0)
+        return round(final, 2), round(pct, 2)
+
+    # fallback seguro
+    return round(product_price, 2), 0.0
+
 
 def require_admin_identity():
-    """
-    Extrae identidad del JWT y valida rol admin.
-    Devuelve (True, user) o (False, msg)
-    """
     try:
         user = get_jwt_identity() or {}
     except Exception:
@@ -113,12 +120,6 @@ def require_admin_identity():
     return False, "Unauthorized: admin role required"
 
 def _dates_overlap(a_start, a_end, b_start, b_end):
-    """
-    True si los rangos [a_start, a_end] y [b_start, b_end] se solapan.
-    None significa abierto (inicio sin límite o fin sin límite).
-    """
-    # Normalize: if none -> open interval extremes
-    # Overlap exists unless one ends before the other starts.
     if a_end and b_start and a_end < b_start:
         return False
     if b_end and a_start and b_end < a_start:
@@ -126,12 +127,6 @@ def _dates_overlap(a_start, a_end, b_start, b_end):
     return True
 
 def _check_conflict(field_name, field_value, start_date, end_date, exclude_id=None):
-    """
-    Busca descuentos activos existentes para 'field_name' ('product_sku' or 'category')
-    que se solapen en fechas con el rango propuesto.
-    exclude_id: ObjectId string para ignorar en actualizacion.
-    Retorna True si hay conflicto (solapamiento).
-    """
     query = {field_name: field_value, "active": True}
     if exclude_id:
         try:
@@ -148,22 +143,18 @@ def _check_conflict(field_name, field_value, start_date, end_date, exclude_id=No
     return False, None
 
 def _find_applicable_discount_for_product(product_doc):
-    """
-    Devuelve el descuento aplicable al producto (prioridad SKU > category).
-    Si hay varios (no debería), se elige el más restrictivo por fecha/inserción (mejor matching).
-    """
     sku = product_doc.get("sku")
     category = product_doc.get("category")
-    # 1. buscar por SKU
+
     d = product_discounts.find_one({"product_sku": sku, "active": True})
     if d and is_discount_active(d):
         return d, "sku"
-    # 2. fallback categoría
+
     d = product_discounts.find_one({"category": category, "active": True})
     if d and is_discount_active(d):
         return d, "category"
-    return None, None
 
+    return None, None
 # ---------------------------
 # Routes
 # ---------------------------

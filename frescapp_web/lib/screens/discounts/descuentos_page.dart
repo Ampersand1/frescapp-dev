@@ -422,7 +422,7 @@ class _DescuentosPageState extends State<DescuentosPage> {
                     shape: BoxShape.circle,
                   ),
                   child: Text(
-                    "${(discountPercent * 100).toInt()}%",
+                    "${(discountPercent).toInt()}%",
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,

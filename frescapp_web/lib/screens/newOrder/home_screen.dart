@@ -333,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     )
                                   ]),
                               child: Text(
-                                '-${(discountPercent * 100).toInt()}%',
+                                '-${(discountPercent).toInt()}%',
                                 style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 10,
@@ -470,7 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 shape: BoxShape.circle,
                                               ),
                                               child: Text(
-                                                '-${(discountPercent * 100).toInt()}%',
+                                                '-${(discountPercent).toInt()}%',
                                                 style: const TextStyle(
                                                   color: Colors.black,
                                                   fontWeight: FontWeight.bold,

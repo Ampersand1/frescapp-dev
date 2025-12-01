@@ -177,7 +177,7 @@ class _CartScreenState extends State<CartScreen> {
                                   )
                                 ]),
                             child: Text(
-                              '-${(discountPercent * 100).toInt()}%',
+                              '-${(discountPercent).toInt()}%',
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 8,
