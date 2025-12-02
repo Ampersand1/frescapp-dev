@@ -180,9 +180,6 @@ class _DescuentosPageState extends State<DescuentosPage> {
 
   // 🚀 NAVEGACIÓN SEGURA: Usa pushReplacement para evitar datos viejos en el stack
   void _handleNavigation(int index) {
-    // ⭐ Sincronizar el estado REAL del carrito ANTES de salir
-    currentOrder = syncOrderProducts(allProducts, currentOrder);
-
     // 0: Home → limpiar stack
     if (index == 0) {
       Navigator.of(context).pushAndRemoveUntil(

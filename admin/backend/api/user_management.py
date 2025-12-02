@@ -14,7 +14,7 @@ try:
 except ImportError:
     emails = None
 
-from db import get_db
+from ..db import get_db
 
 # --- CONFIGURACIÓN ---
 SECRET_KEY = "Caremonda"  # ⚠️ Reemplázala por variable de entorno en producción
