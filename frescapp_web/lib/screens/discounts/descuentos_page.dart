@@ -13,7 +13,6 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:http/http.dart' as http;
-import 'package:frescapp/utils/cart_sync.dart';
 
 class DescuentosPage extends StatefulWidget {
   final Order? order;
@@ -194,19 +193,22 @@ class _DescuentosPageState extends State<DescuentosPage> {
       return;
     }
 
-    // 5: WhatsApp
+    // 5: WhatsApp -> No cambia de pantalla, solo lanza URL
     if (index == 5) {
       _openWhatsApp(context);
       return;
     }
 
+    // Para las demás pantallas, usamos pushReplacement para sustituir la pantalla actual
     Widget? nextScreen;
 
     if (_userActive) {
       if (index == 1) nextScreen = OrdersScreen(order: currentOrder);
       if (index == 3) nextScreen = ProfileScreen(order: currentOrder);
     } else {
-      if (index == 2) nextScreen = LoginScreen();
+      if (index == 2)
+        nextScreen =
+            LoginScreen(); // Login usualmente no recibe orden, pero cuidado al volver
     }
 
     if (nextScreen != null) {
@@ -215,8 +217,7 @@ class _DescuentosPageState extends State<DescuentosPage> {
         MaterialPageRoute(builder: (context) => nextScreen!),
       );
     }
-
-    // index == 4 → Ya estamos en Descuentos
+    // Si index es 4 (Descuentos), no hacemos nada porque ya estamos aquí
   }
 
   @override
