@@ -21,7 +21,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # ---------------------------
 # Inicializar conexión con MongoDB desde db.py
 # ---------------------------
-from .db import init_db, get_db
+from backend.db import init_db, get_db
 
 init_db(app)      # usa MONGO_URI o MONGO_URI_PROD según FLASK_ENV
 db = get_db()
