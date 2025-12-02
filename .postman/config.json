@@ -1,0 +1,14 @@
+{
+  "workspace": {
+    "id": "5cb946d9-5535-4c29-bbd3-f5a5f61cdc95"
+  },
+  "entities": {
+    "collections": [
+      "..\\postman\\collections\\ENDPOINTS DESCUENTOS.postman_collection.json"
+    ],
+    "environments": [],
+    "specs": [],
+    "flows": [],
+    "globals": []
+  }
+}

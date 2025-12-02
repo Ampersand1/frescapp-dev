@@ -1,0 +1,419 @@
+{
+  "info": {
+    "_postman_id": "98aa759f-34a6-447b-acae-48a5c717807c",
+    "name": "ENDPOINTS DESCUENTOS",
+    "description": "# 🚀 Get started here\n\nThis template guides you through CRUD operations (GET, POST, PUT, DELETE), variables, and tests.\n\n## 🔖 **How to use this template**\n\n#### **Step 1: Send requests**\n\nRESTful APIs allow you to perform CRUD operations using the POST, GET, PUT, and DELETE HTTP methods.\n\nThis collection contains each of these [request](https://learning.postman.com/docs/sending-requests/requests/) types. Open each request and click \"Send\" to see what happens.\n\n#### **Step 2: View responses**\n\nObserve the response tab for status code (200 OK), response time, and size.\n\n#### **Step 3: Send new Body data**\n\nUpdate or add new data in \"Body\" in the POST request. Typically, Body data is also used in PUT request.\n\n```\n{\n    \"name\": \"Add your name in the body\"\n}\n\n ```\n\n#### **Step 4: Update the variable**\n\nVariables enable you to store and reuse values in Postman. We have created a [variable](https://learning.postman.com/docs/sending-requests/variables/) called `base_url` with the sample request [https://postman-api-learner.glitch.me](https://postman-api-learner.glitch.me). Replace it with your API endpoint to customize this collection.\n\n#### **Step 5: Add tests in the \"Scripts\" tab**\n\nAdding tests to your requests can help you confirm that your API is working as expected. You can write test scripts in JavaScript and view the output in the \"Test Results\" tab.\n\n<img src=\"https://content.pstmn.io/fa30ea0a-373d-4545-a668-e7b283cca343/aW1hZ2UucG5n\" width=\"2162\" height=\"1530\">\n\n## 💪 Pro tips\n\n- Use folders to group related requests and organize the collection.\n    \n- Add more [scripts](https://learning.postman.com/docs/writing-scripts/intro-to-scripts/) to verify if the API works as expected and execute workflows.\n    \n\n## 💡Related templates\n\n[API testing basics](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=e9a37a28-055b-49cd-8c7e-97494a21eb54&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)  \n[API documentation](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=e9c28f47-1253-44af-a2f3-20dce4da1f18&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)  \n[Authorization methods](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=31a9a6ed-4cdf-4ced-984c-d12c9aec1c27&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1.\tCrear descuento",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "id": "983668c1-ca0a-4527-8161-d6a5eb69ec7c",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "id": "723d12b1-e21b-4768-ba35-448ea331783e",
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "id": "a8aea3f2-73aa-42cc-b9c6-68e5dfd7ea97",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"product_sku\": \"BOG-CAT002-00051\",\r\n  \"discount_type\": \"percentage\",\r\n  \"value\": 10,\r\n  \"active\": true,\r\n  \"start_date\": \"2025-01-01\",\r\n  \"end_date\": \"2025-01-31\"\r\n}\r\n\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/create",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "create"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+      }
+    },
+    {
+      "name": "2.\tActualizar producto",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "id": "56dec296-c583-4725-972d-6a0afd185695",
+            "exec": [
+              "pm.test(\"Successful POST request\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "id": "89f0eb39-e481-4131-b332-9db01b2871d4",
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "id": "2dea5725-613e-4553-b7c9-df60198f9e75",
+      "request": {
+        "method": "PUT",
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/update/<discount_id>",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "update",
+            "<discount_id>"
+          ]
+        },
+        "description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+      }
+    },
+    {
+      "name": "3.\tEliminar (desactivar) descuento",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "id": "10bc40d7-36a3-4b85-8c19-8536efbbfa7f",
+            "exec": [
+              "pm.test(\"Successful PUT request\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "id": "2ae750c9-ebe8-4f08-96e4-d2175eb6c50c",
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "id": "161a69b6-8e74-40a5-8d28-2833c3b32769",
+      "request": {
+        "method": "DELETE",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n\t\"name\": \"Add your name in the body\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/delete/<discount_id>",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "delete",
+            "<discount_id>"
+          ]
+        },
+        "description": "This is a PUT request and it is used to overwrite an existing piece of data. For instance, after you create an entity with a POST request, you may want to modify that later. You can do that using a PUT request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful PUT request typically returns a `200 OK`, `201 Created`, or `204 No Content` response code."
+      }
+    },
+    {
+      "name": "4.\tListar todos los descuentos",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "id": "c2eb0676-99da-4691-9a17-54cd8939a010",
+            "exec": [
+              "pm.test(\"Successful DELETE request\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "id": "112f8451-dcbc-4ebc-b720-e3b85eefd087",
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "id": "4f1c85c4-a0a3-4a6f-af92-bfafc2e45e8a",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"product_sku\": \"BOG-CAT002-00051\",\r\n  \"discount_type\": \"fixed\",\r\n  \"value\": 2500\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/all",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "all"
+          ]
+        },
+        "description": "This is a DELETE request, and it is used to delete data that was previously created via a POST request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful DELETE request typically returns a `200 OK`, `202 Accepted`, or `204 No Content` response code."
+      }
+    },
+    {
+      "name": "5.\tObtener descuento por SKU",
+      "id": "13e49b07-4449-488a-bd32-c28742e252da",
+      "request": {
+        "method": "GET",
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "text"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/sku/<product_sku>",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "sku",
+            "<product_sku>"
+          ]
+        }
+      }
+    },
+    {
+      "name": "6.\tObtener descuento por categoría",
+      "id": "d11f0d3e-a6c6-459c-98b2-ab71d9806825",
+      "request": {
+        "method": "GET",
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "text"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/category/<category>",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "category",
+            "<category>"
+          ]
+        }
+      }
+    },
+    {
+      "name": "7.\tAplicar descuento a un producto (sin guardar nada)",
+      "id": "8ee469cb-b725-4803-8c77-ca80c50b1ae4",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"product_sku\": \"BOG-CAT002-00051\",\r\n  \"discount_type\": \"fixed\",\r\n  \"value\": 2500\r\n}",
+          "options": {
+            "raw": {
+              "language": "text"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/apply",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "apply"
+          ]
+        }
+      }
+    },
+    {
+      "name": "8.\tValidar si se puede crear descuento",
+      "id": "4a379e87-6a8a-4177-972b-0c9adbd7bc73",
+      "request": {
+        "method": "GET",
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "text"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/validate/<sku>",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "validate",
+            "<sku>"
+          ]
+        }
+      }
+    },
+    {
+      "name": "9.\tPrevisualizar descuento",
+      "id": "638af41a-0562-47d0-a3a6-5a4d4efe4383",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"product_sku\": \"BOG-CAT002-00051\",\r\n  \"discount_type\": \"fixed\",\r\n  \"value\": 2500\r\n}",
+          "options": {
+            "raw": {
+              "language": "text"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/preview",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "preview"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "id": "213f360d-ed64-4910-b8fb-b5b81d8def19",
+      "key": "id",
+      "value": "1"
+    },
+    {
+      "id": "34203126-b90f-41da-a7e5-cf4a7f2ac212",
+      "key": "base_url",
+      "value": "https://template.postman-echo.com"
+    }
+  ]
+}
