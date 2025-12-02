@@ -38,22 +38,6 @@ class _CartScreenState extends State<CartScreen> {
     super.initState();
   }
 
-  // --- LOGICA DE DESCUENTOS ---
-  double _getProductDiscount(Product product) {
-    if (product.name != null) {
-      // Simulación de descuentos variados
-      if (product.name!.length % 3 == 0) return 0.20; // 20%
-      if (product.name!.length % 5 == 0) return 0.10; // 10%
-    }
-    return 0.0;
-  }
-
-  double _calculateDiscountedPrice(
-      double originalPrice, double discountPercent) {
-    return originalPrice * (1 - discountPercent);
-  }
-  // ---------------------------
-
   void _openWhatsApp(BuildContext context) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     try {
@@ -106,24 +90,19 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Product> productsWithQuantity = widget.productsInCart
-        .where((product) => product.quantity! > 0)
-        .toList();
+    final List<Product> productsWithQuantity =
+        widget.productsInCart.where((p) => (p.quantity ?? 0) > 0).toList();
 
     double total = 0;
     double totalSavings = 0;
 
-    // Calcular totales considerando descuentos
     for (var product in productsWithQuantity) {
-      double originalPrice = (product.priceSale ?? 0).toDouble();
-      double discountPercent = _getProductDiscount(product);
-      double finalPrice = originalPrice;
+      double originalPrice = product.priceSale ?? 0;
+      double finalPrice = product.finalPrice ?? originalPrice;
+      bool hasDiscount = product.hasDiscount;
 
-      if (discountPercent > 0) {
-        finalPrice =
-            _calculateDiscountedPrice(originalPrice, discountPercent);
-        totalSavings +=
-            (originalPrice - finalPrice) * (product.quantity ?? 0);
+      if (hasDiscount) {
+        totalSavings += (originalPrice - finalPrice) * (product.quantity ?? 0);
       }
 
       total += finalPrice * (product.quantity ?? 0);
@@ -143,13 +122,10 @@ class _CartScreenState extends State<CartScreen> {
               itemBuilder: (context, index) {
                 final Product product = productsWithQuantity[index];
 
-                // Variables locales para renderizado
-                double originalPrice = (product.priceSale ?? 0).toDouble();
-                double discountPercent = _getProductDiscount(product);
-                bool hasDiscount = discountPercent > 0;
-                double finalPrice = hasDiscount
-                    ? _calculateDiscountedPrice(originalPrice, discountPercent)
-                    : originalPrice;
+                 double originalPrice = product.priceSale ?? 0;
+                double finalPrice = product.finalPrice ?? originalPrice;
+                bool hasDiscount = product.hasDiscount;
+                double discountPct = product.savingsPct ?? 0;
                 double subTotal = finalPrice * (product.quantity ?? 0);
 
                 return ListTile(
@@ -167,17 +143,11 @@ class _CartScreenState extends State<CartScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(3),
                             decoration: const BoxDecoration(
-                                color: Colors.yellow,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 2,
-                                    offset: Offset(1, 1),
-                                  )
-                                ]),
+                              color: Colors.yellow,
+                              shape: BoxShape.circle,
+                            ),
                             child: Text(
-                              '-${(discountPercent * 100).toInt()}%',
+                              '-${discountPct.toInt()}%',
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 8,
@@ -357,7 +327,8 @@ class _CartScreenState extends State<CartScreen> {
 
             // 1. TOTAL
             Padding(
-              padding: const EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0, bottom: 5.0),
+              padding: const EdgeInsets.only(
+                  top: 16.0, left: 16.0, right: 16.0, bottom: 5.0),
               child: Text(
                 'Total: \$ ${NumberFormat('#,###').format(total)}',
                 style:
@@ -372,12 +343,13 @@ class _CartScreenState extends State<CartScreen> {
                 child: Text(
                   'Ahorraste: \$ ${NumberFormat('#,###').format(totalSavings)}',
                   style: const TextStyle(
-                      fontSize: 18, // Tamaño ligeramente más grande para resaltar
+                      fontSize:
+                          18, // Tamaño ligeramente más grande para resaltar
                       fontWeight: FontWeight.bold,
                       color: Colors.green),
                 ),
               ),
-            
+
             const SizedBox(height: 10),
 
             // BOTÓN CONFIRMAR
@@ -386,7 +358,7 @@ class _CartScreenState extends State<CartScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   // Esto asegura que el texto sea ROJO cuando el botón está deshabilitado (onPressed es null)
-                  disabledForegroundColor: Colors.red, 
+                  disabledForegroundColor: Colors.red,
                 ),
                 onPressed: total >= 100000
                     ? () {
@@ -401,14 +373,16 @@ class _CartScreenState extends State<CartScreen> {
                       }
                     : null,
                 child: Text(
-                  total >= 100000 
-                    ? 'Confirmar Pedido' 
-                    : 'Mínimo de compra \$ 100.000',
+                  total >= 100000
+                      ? 'Confirmar Pedido'
+                      : 'Mínimo de compra \$ 100.000',
                   // Si prefieres forzar el estilo del texto directamente:
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: total >= 100000 ? null : Colors.red, // Rojo explícito si no cumple
+                    color: total >= 100000
+                        ? null
+                        : Colors.red, // Rojo explícito si no cumple
                   ),
                 ),
               ),
@@ -423,7 +397,7 @@ class _CartScreenState extends State<CartScreen> {
           currentIndex: 0,
           selectedItemColor: Colors.lightGreen.shade900,
           unselectedItemColor: Colors.grey,
-          type: BottomNavigationBarType.fixed, 
+          type: BottomNavigationBarType.fixed,
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.home),
@@ -444,7 +418,7 @@ class _CartScreenState extends State<CartScreen> {
                 icon: Icon(Icons.person),
                 label: 'Perfil',
               ),
-             const BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.local_offer),
               label: 'Descuentos',
             ),
@@ -456,30 +430,40 @@ class _CartScreenState extends State<CartScreen> {
           onTap: (int index) {
             // Lista de acciones
             List<VoidCallback> activeActions = [];
-            
+
             // 0. Inicio
-            activeActions.add(() => Navigator.push(context,
-                MaterialPageRoute(builder: (context) => HomeScreen(order: widget.order))));
-            
+            activeActions.add(() => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => HomeScreen(order: widget.order))));
+
             // 1. Pedidos (si activo)
             if (_userActive) {
-              activeActions.add(() => Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => OrdersScreen(order: widget.order))));
+              activeActions.add(() => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          OrdersScreen(order: widget.order))));
             }
-            
+
             // 2. Login/Perfil
             if (!_userActive) {
               activeActions.add(() => Navigator.push(context,
                   MaterialPageRoute(builder: (context) => LoginScreen())));
             } else {
-              activeActions.add(() => Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => ProfileScreen(order: widget.order))));
+              activeActions.add(() => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          ProfileScreen(order: widget.order))));
             }
-            
+
             // 3. Descuentos
-            activeActions.add(() => Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const DescuentosPage())));
-            
+            activeActions.add(() => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const DescuentosPage())));
+
             // 4. WhatsApp
             activeActions.add(() => _openWhatsApp(context));
 

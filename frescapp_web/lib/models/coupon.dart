@@ -1,6 +1,3 @@
-// lib/models/coupon.dart
-import 'dart:convert';
-
 enum CouponType { percent, fixed }
 
 class Coupon {

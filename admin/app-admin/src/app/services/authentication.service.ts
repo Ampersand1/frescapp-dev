@@ -6,11 +6,8 @@ import { Observable, map } from 'rxjs';
   providedIn: 'root'
 })
 export class AuthenticationService {
-  
-  // --- CAMBIO IMPORTANTE: Apuntamos a tu PC (Backend Local) ---
-  private baseUrl = 'http://127.0.0.1:5000/'; 
-  // private baseUrl = 'https://app.buyfrescapp.com:5000/'; // Nube desactivada
-
+  private baseUrl = 'https://app.buyfrescapp.com:5000/';
+  //private baseUrl = 'http://localhost:5000/';
   private _username: string = '';
   
   constructor(private http: HttpClient) { }

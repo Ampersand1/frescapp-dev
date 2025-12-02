@@ -6,8 +6,8 @@ import { Observable, map } from 'rxjs';
   providedIn: 'root'
 })
 export class ClientesService {
-  private baseUrl = 'https://app.buyfrescapp.com:5000/';
-  //private baseUrl = 'http://localhost:5000/';
+  //private baseUrl = 'https://app.buyfrescapp.com:5000/';
+  private baseUrl = 'http://localhost:5000/';
   constructor(private http: HttpClient) { }
   getClientes() {
     return this.http.get<any[]>(this.baseUrl+'api/customer/customers');
