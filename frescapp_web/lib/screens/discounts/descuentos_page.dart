@@ -125,7 +125,7 @@ class _DescuentosPageState extends State<DescuentosPage> {
 
   // Lógica central de actualización del carrito
   void _updateOrder(Product product) {
-    currentOrder.products ??= [];
+    if (currentOrder.products == null) currentOrder.products = [];
 
     int index = currentOrder.products!.indexWhere((p) => p.sku == product.sku);
 
@@ -179,9 +179,9 @@ class _DescuentosPageState extends State<DescuentosPage> {
     return false;
   }
 
-  // NAVEGACIÓN SEGURA: Usa pushReplacement para evitar datos viejos en el stack
+  // 🚀 NAVEGACIÓN SEGURA: Usa pushReplacement para evitar datos viejos en el stack
   void _handleNavigation(int index) {
-    // Sincronizar el estado REAL del carrito ANTES de salir
+    // ⭐ Sincronizar el estado REAL del carrito ANTES de salir
     currentOrder = syncOrderProducts(allProducts, currentOrder);
 
     // 0: Home → limpiar stack
