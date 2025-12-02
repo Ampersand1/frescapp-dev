@@ -16,6 +16,10 @@ export class LoginComponent {
   constructor(private authService: AuthenticationService, private router: Router) {}
 
   login(): void {
+    // -----------------------------------------------------------
+    // CÓDIGO ORIGINAL (COMENTADO PARA EVITAR CONEXIÓN AL BACKEND)
+    // -----------------------------------------------------------
+    /*
     if (this.username === '' || this.password === '') {
       this.flag = true;
       this.error = 'Por favor, ingrese nombre de usuario y contraseña.';
@@ -41,5 +45,24 @@ export class LoginComponent {
         this.error = 'Nombre de usuario o contraseña incorrectos.';
       }
     );
+    */
+
+    // -----------------------------------------------------------
+    // CÓDIGO NUEVO (FORZAR ENTRADA / BYPASS)
+    // -----------------------------------------------------------
+    console.log("🔓 MODO DIOS ACTIVADO: Entrando a la fuerza...");
+
+    // 1. Guardamos un token falso (para engañar al guardián de rutas)
+    localStorage.setItem('token', 'TOKEN_FALSO_12345_ADMIN');
+
+    // 2. Guardamos un nombre de usuario cualquiera
+    localStorage.setItem('username', 'SuperAdmin');
+
+    // 3. Guardamos el ROL DE ADMINISTRADOR (Vital para que aparezca el menú)
+    // Importante: Tiene que ser una lista ['administrador'] convertida a texto
+    localStorage.setItem('role', JSON.stringify(['administrador']));
+
+    // 4. Redirigimos a la página principal
+    this.router.navigate(['/home']);
   }
 }

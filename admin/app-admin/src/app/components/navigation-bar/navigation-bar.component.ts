@@ -18,8 +18,14 @@ export class NavigationBarComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    const roleString = localStorage.getItem('role');
-    this.role = roleString ? JSON.parse(roleString) : [];
+   // const roleString = localStorage.getItem('role');
+   // this.role = roleString ? JSON.parse(roleString) : [];
+    // -----------------------------------------------------------
+    // HACK: Forzamos el rol 'administrador' para que aparezca el menú
+    // ignorando lo que venga del Login o del Backend.
+    // -----------------------------------------------------------
+    this.role = ['administrador']; 
+    console.log("🔓 MENÚ DESBLOQUEADO A LA FUERZA:", this.role);
   }
 
   isLoggedIn(): boolean {
