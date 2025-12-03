@@ -201,6 +201,10 @@ def create_product_discount():
         prod = products.find_one({"sku": product_sku})
         if not prod:
             return jsonify({"error": "El SKU no existe en productos"}), 404
+
+        if not discount_category:
+            discount_category = prod.get("category")
+
     if discount_category:
         exists = products.find_one({"category": discount_category})
         if not exists:
@@ -218,7 +222,9 @@ def create_product_discount():
                 "error": "Ya existe un descuento activo/solapado para este SKU",
                 "existing_discount": serialize_discount(existing)
             }), 409
-    if discount_category:
+
+    if discount_category and not product_sku:
+        # SOLO si el descuento es exclusivamente por categoría
         conflict, existing = _check_conflict("category", discount_category, start_date, end_date)
         if conflict:
             return jsonify({
@@ -259,6 +265,7 @@ def create_product_discount():
         "product": product_info
     }), 201
 
+
 @product_discount_api.route("/update/<string:discount_id>", methods=["PUT"])
 #@jwt_required()
 def update_product_discount(discount_id):
@@ -272,7 +279,8 @@ def update_product_discount(discount_id):
 
     data = request.get_json() or {}
     update = {}
-    # We'll compute candidate new values for conflict checks
+
+    # Values before update
     new_product_sku = discount.get("product_sku")
     new_category = discount.get("category")
     new_start = discount.get("start_date")
@@ -281,13 +289,28 @@ def update_product_discount(discount_id):
     new_value = discount.get("value")
     new_active = discount.get("active", True)
 
+    # Update SKU
     if "product_sku" in data:
         new_product_sku = data.get("product_sku")
-        new_category = None  # exclusividad: si pasa a SKU, category debe ser None
+        new_category = None  # exclusividad
 
+        if new_product_sku:
+            prod = products.find_one({"sku": new_product_sku})
+            if not prod:
+                return jsonify({"error": "El SKU no existe en productos"}), 404
+            new_category = prod.get("category")
+            update["category"] = new_category
+            update["product_sku"] = new_product_sku
+
+    # Update category directly
     if "category" in data:
         new_category = data.get("category")
         new_product_sku = None  # exclusividad
+        exists = products.find_one({"category": new_category})
+        if not exists:
+            return jsonify({"error": "La categoría no existe en productos"}), 404
+        update["category"] = new_category
+        update["product_sku"] = None
 
     if "discount_type" in data:
         if data["discount_type"] not in ("percentage", "fixed"):
@@ -323,29 +346,11 @@ def update_product_discount(discount_id):
         new_end = parsed
         update["end_date"] = new_end
 
-    # Exclusivity checks if both provided simultaneously
-    if new_product_sku and new_category:
-        return jsonify({"error": "No puede setear product_sku y category al mismo tiempo"}), 400
-
-    # Validate referenced product/category existence
-    if new_product_sku:
-        prod = products.find_one({"sku": new_product_sku})
-        if not prod:
-            return jsonify({"error": "El SKU no existe en productos"}), 404
-        update["product_sku"] = new_product_sku
-        update["category"] = None
-    if new_category:
-        exists = products.find_one({"category": new_category})
-        if not exists:
-            return jsonify({"error": "La categoría no existe en productos"}), 404
-        update["category"] = new_category
-        update["product_sku"] = None
-
-    # Validate date consistency
+    # Validation
     if new_start and new_end and new_start > new_end:
         return jsonify({"error": "start_date must be before end_date"}), 400
 
-    # Conflict detection (skip current discount id)
+    # Conflict detection
     if new_product_sku:
         conflict, existing = _check_conflict("product_sku", new_product_sku, new_start, new_end, exclude_id=discount_id)
         if conflict:
@@ -353,7 +358,8 @@ def update_product_discount(discount_id):
                 "error": "Ya existe un descuento activo/solapado para este SKU",
                 "existing_discount": serialize_discount(existing)
             }), 409
-    if new_category:
+
+    if new_category and not new_product_sku:
         conflict, existing = _check_conflict("category", new_category, new_start, new_end, exclude_id=discount_id)
         if conflict:
             return jsonify({

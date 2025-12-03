@@ -68,62 +68,6 @@
       }
     },
     {
-      "name": "2.\tActualizar producto",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "id": "56dec296-c583-4725-972d-6a0afd185695",
-            "exec": [
-              "pm.test(\"Successful POST request\", function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-              "});",
-              ""
-            ],
-            "type": "text/javascript"
-          }
-        },
-        {
-          "listen": "prerequest",
-          "script": {
-            "id": "89f0eb39-e481-4131-b332-9db01b2871d4",
-            "exec": [
-              ""
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "id": "2dea5725-613e-4553-b7c9-df60198f9e75",
-      "request": {
-        "method": "PUT",
-        "body": {
-          "mode": "raw",
-          "raw": "",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "http://localhost:5000/api/product_discount/update/<discount_id>",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "5000",
-          "path": [
-            "api",
-            "product_discount",
-            "update",
-            "<discount_id>"
-          ]
-        },
-        "description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
-      }
-    },
-    {
       "name": "3.\tEliminar (desactivar) descuento",
       "event": [
         {
@@ -402,16 +346,53 @@
           ]
         }
       }
+    },
+    {
+      "name": "2.\tActualizar descuento",
+      "id": "dc906b27-7f31-4e4d-a153-1db656a9427e",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/product_discount/update/692e4cbe49c0b0c9421611c8",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "product_discount",
+            "update",
+            "692e4cbe49c0b0c9421611c8"
+          ]
+        }
+      }
     }
   ],
   "variable": [
     {
-      "id": "213f360d-ed64-4910-b8fb-b5b81d8def19",
+      "id": "eb7362bc-0230-4b52-811c-687957126d6e",
       "key": "id",
       "value": "1"
     },
     {
-      "id": "34203126-b90f-41da-a7e5-cf4a7f2ac212",
+      "id": "a541c248-c7d6-47f7-99e7-0e6a68cd01ac",
       "key": "base_url",
       "value": "https://template.postman-echo.com"
     }
