@@ -89,11 +89,28 @@ class Customer:
         return customers_collection.find()
     @staticmethod
     def object(id):
-        customer_data = customers_collection.find_one({'_id': ObjectId(id) }, {'_id': 0})
-        if customer_data:
-            return Customer(**customer_data)
-        else:
+        data = customers_collection.find_one({"_id": ObjectId(id)})
+        if not data:
             return None
+        return Customer(
+        phone=data.get("phone"),
+        name=data.get("name"),
+        document=data.get("document"),
+        document_type=data.get("document_type"),
+        address=data.get("address"),
+        restaurant_name=data.get("restaurant_name"),
+        email=data.get("email"),
+        status=data.get("status"),
+        created_at=data.get("created_at"),
+        updated_at=data.get("updated_at"),
+        password=data.get("password"),
+        category=data.get("category"),
+        list_products=data.get("list_products", []),
+        role=data.get("role"),
+        user=data.get("user"),
+        open_hour=data.get("open_hour", "")
+        )
+            
     @staticmethod
     def find_by_email(email):
         return customers_collection.find_one({"email": email})
