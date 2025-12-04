@@ -587,3 +587,107 @@ def preview_discount():
         "discount_type": discount_type,
         "value": val
     }), 200
+    
+@product_discount_api.route("/products", methods=["GET"])
+def get_products_with_discounts():
+    """
+    Devuelve una lista de productos que tienen descuentos asociados
+    (ya sea por SKU o por categoría).
+
+    Resultado:
+    [
+        {
+            "product": { ... info del producto ... },
+            "discount": { ... descuento ... },
+            "final_price": float,
+            "savings_pct": float,
+            "discount_origin": "sku" | "category"
+        }
+    ]
+    """
+
+    # 1. Obtener todos los descuentos (SKU o categoría)
+    discounts = list(product_discounts.find({
+        "active": True
+    }))
+
+    if not discounts:
+        return jsonify([]), 200
+
+    results = []
+
+    # 2. Crear un mapa por categoría
+    category_discounts = {}
+    sku_discounts = {}
+
+    for d in discounts:
+        if d.get("product_sku"):
+            sku_discounts[d["product_sku"]] = d
+        elif d.get("category"):
+            category_discounts[d["category"]] = d
+
+    # 3. Buscar productos afectados por estos descuentos
+    #    Si hay descuento por categoría, listar TODOS los productos de esa categoría.
+    #    Si hay descuento por SKU, tomar solo ese producto.
+
+    # A) Productos con descuento por SKU
+    for sku, discount in sku_discounts.items():
+        prod = products.find_one({"sku": sku})
+        if not prod:
+            continue
+
+        # Validar vigencia por fecha
+        if not is_discount_active(discount):
+            continue
+
+        original_price = float(prod.get("price_sale", 0))
+        final_price, savings_pct = compute_final_price(original_price, discount)
+
+        results.append({
+            "product": {
+                "sku": prod.get("sku"),
+                "name": prod.get("name"),
+                "category": prod.get("category"),
+                "price_sale": original_price,
+                "image": prod.get("image"),
+                "status": prod.get("status"),
+            },
+            "discount": serialize_discount(discount),
+            "discount_origin": "sku",
+            "final_price": final_price,
+            "savings_pct": savings_pct,
+        })
+
+    # B) Productos con descuento por categoría
+    for category, discount in category_discounts.items():
+
+        if not is_discount_active(discount):
+            continue
+
+        prods = list(products.find({"category": category}))
+
+        for prod in prods:
+            # Omitir si ya tiene descuento por SKU (prioridad)
+            if prod.get("sku") in sku_discounts:
+                continue
+
+            original_price = float(prod.get("price_sale", 0))
+            final_price, savings_pct = compute_final_price(original_price, discount)
+
+            results.append({
+                "product": {
+                    "sku": prod.get("sku"),
+                    "name": prod.get("name"),
+                    "category": prod.get("category"),
+                    "price_sale": original_price,
+                    "image": prod.get("image"),
+                    "status": prod.get("status"),
+                },
+                "discount": serialize_discount(discount),
+                "discount_origin": "category",
+                "final_price": final_price,
+                "savings_pct": savings_pct,
+            })
+
+    return jsonify(results), 200
+
