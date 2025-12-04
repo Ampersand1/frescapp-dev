@@ -271,12 +271,37 @@ def update_product(product_id):
 
 @product_api.route('/products/', methods=['GET'])
 def list_product():
-    # Filtrar solo los productos con status "active"
-    products_cursor = Product.objects(status="active")
+    # 1) Obtener todos los productos activos (1 query)
+    products_cursor = list(products.find({"status": "active"}))
 
+    # 2) Obtener todos los descuentos activos (1 query)
+    now = datetime.utcnow()
+    discounts_cursor = list(product_discounts.find({
+        "active": True,
+        "$or": [
+            {"start_date": None},
+            {"start_date": {"$lte": now}}
+        ],
+        "$or": [
+            {"end_date": None},
+            {"end_date": {"$gte": now}}
+        ]
+    }))
+
+    # 3) Construir mapas en RAM para lookup instantáneo
+    sku_discounts = {}
+    category_discounts = {}
+
+    for d in discounts_cursor:
+        if d.get("product_sku"):
+            sku_discounts[d["product_sku"]] = d
+        elif d.get("category"):
+            category_discounts[d["category"]] = d
+
+    # 4) Construir respuesta
     product_data = []
+
     for product in products_cursor:
-        # Mantener la estructura original
         base = {
             "id": str(product["_id"]),
             "name": product.get("name"),
@@ -305,9 +330,13 @@ def list_product():
             "proveedor": product.get("proveedor"),
         }
 
-        # Precio final y descuento (no destructivo)
-        discount_doc = get_active_discount_for_product(product)
-        if discount_doc and is_discount_active(discount_doc):
+        sku = product.get("sku")
+        category = product.get("category")
+
+        # 5) Prioridad: descuento por SKU sobre categoría
+        discount_doc = sku_discounts.get(sku) or category_discounts.get(category)
+
+        if discount_doc:
             final_price, savings_pct = compute_final_price(base["price_sale"], discount_doc)
             base.update({
                 "final_price": final_price,
@@ -327,8 +356,8 @@ def list_product():
 
         product_data.append(base)
 
-    products_json = json.dumps(product_data, default=str)
-    return products_json, 200
+    return jsonify(product_data), 200
+
 
 
 @product_api.route('/products_customer/<string:customer_email>', methods=['GET'])
