@@ -9,6 +9,7 @@ import 'package:frescapp/screens/orders/orders_screen.dart';
 import 'package:frescapp/screens/profile/profile_screen.dart';
 import 'package:frescapp/screens/login_screen.dart';
 import 'package:frescapp/screens/newOrder/cart_screen.dart';
+import 'package:frescapp/services/cart_service.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -36,15 +37,14 @@ class _DescuentosPageState extends State<DescuentosPage> {
 
   List<Product> allProducts = [];
   late Order currentOrder;
-  late num productCounter = 0;
 
   @override
   void initState() {
     super.initState();
     _checkTokenValidity();
-    // Aseguramos que currentOrder no sea nulo y tenga una lista inicializada
+
+    // Order solo se usa para navegación, ya NO para el carrito
     currentOrder = widget.order ?? Order(products: []);
-    if (currentOrder.products == null) currentOrder.products = [];
 
     getInitialProducts();
   }
@@ -57,11 +57,19 @@ class _DescuentosPageState extends State<DescuentosPage> {
       List<Product> fetchedProducts =
           await productService.getProducts(userEmail);
 
+      // Actualizar snapshots de CartService con los productos cargados
+      for (var p in fetchedProducts) {
+        if (p.sku != null && p.sku!.isNotEmpty) {
+          try {
+            CartService().updateSnapshotFromProduct(p);
+          } catch (_) {}
+        }
+      }
+
       setState(() {
         allProducts = fetchedProducts;
-        _syncProductsWithCart(); // Sincronización inicial crítica
+        _syncWithCart();
         _isLoading = false;
-        _updateCounter();
       });
     } catch (e) {
       if (kDebugMode) print("Error cargando productos: $e");
@@ -69,77 +77,30 @@ class _DescuentosPageState extends State<DescuentosPage> {
     }
   }
 
-  // Actualiza el contador visual de productos totales
-  void _updateCounter() {
-    productCounter = currentOrder.products
-            ?.fold(0, (sum, item) => sum! + (item.quantity ?? 0)) ??
-        0;
-  }
-
-  // Sincroniza lo que ves en pantalla con lo que hay en la memoria de la orden
-  void _syncProductsWithCart() {
-    if (currentOrder.products == null) return;
-
-    for (var product in allProducts) {
-      try {
-        var matchingInCart = currentOrder.products!.firstWhere(
-          (p) => p.sku == product.sku,
-          orElse: () => Product(sku: "dummy"),
-        );
-
-        if (matchingInCart.sku != "dummy") {
-          product.quantity = matchingInCart.quantity;
-        } else {
-          product.quantity = 0;
-        }
-      } catch (e) {
-        product.quantity = 0;
-      }
+  // Sincroniza cantidades de la UI con CartService
+  void _syncWithCart() {
+    for (var p in allProducts) {
+      p.quantity = CartService().qtyForSku(p.sku ?? '');
     }
   }
 
+  // Incrementar usando CartService como única fuente de verdad
   void increaseQuantity(Product product) {
-    setState(() {
-      product.quantity = (product.quantity ?? 0) + 1;
-      _updateOrder(product);
-      _updateCounter();
-    });
+    CartService().addProduct(product);
+    setState(_syncWithCart);
   }
 
+  // Decrementar usando CartService
   void decreaseQuantity(Product product) {
-    setState(() {
-      if ((product.quantity ?? 0) > 0) {
-        product.quantity = (product.quantity ?? 0) - 1;
-        _updateOrder(product);
-        _updateCounter();
-      }
-    });
+    CartService().removeProduct(product);
+    setState(_syncWithCart);
   }
 
-  void updateCounterFromCart(int value) {
-    setState(() {
-      productCounter = value;
-    });
-  }
-
-  // Lógica central de actualización del carrito
-  void _updateOrder(Product product) {
-    if (currentOrder.products == null) currentOrder.products = [];
-
-    int index = currentOrder.products!.indexWhere((p) => p.sku == product.sku);
-
-    if (index != -1) {
-      // El producto ya existe en el carrito
-      if ((product.quantity ?? 0) > 0) {
-        currentOrder.products![index].quantity = product.quantity;
-      } else {
-        // Si llegó a 0, lo eliminamos
-        currentOrder.products!.removeAt(index);
-      }
-    } else if ((product.quantity ?? 0) > 0) {
-      // Si no existe, lo agregamos
-      currentOrder.products!.add(product);
-    }
+  // Contador global real del carrito
+  int get productCounter {
+    return CartService()
+        .items
+        .fold<int>(0, (sum, item) => sum + (item.quantity ?? 0));
   }
 
   Future<void> _checkTokenValidity() async {
@@ -169,43 +130,45 @@ class _DescuentosPageState extends State<DescuentosPage> {
     await launchUrlString(url);
   }
 
-  // 🔒 CONTROL DE RETROCESO: Obliga a ir al Home con los datos nuevos
+  // Back → regresar a Home con un Order actualizado
   Future<bool> _onWillPop() async {
+    widget.order?.products = CartService().items;
+
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => HomeScreen(order: currentOrder)),
+      MaterialPageRoute(
+          builder: (context) =>
+              HomeScreen(order: widget.order ?? Order(products: CartService().items))),
       (Route<dynamic> route) => false,
     );
     return false;
   }
 
-  // 🚀 NAVEGACIÓN SEGURA: Usa pushReplacement para evitar datos viejos en el stack
+  // Navegación segura
   void _handleNavigation(int index) {
-    // 0: Home → limpiar stack
+    widget.order?.products = CartService().items;
+
     if (index == 0) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-            builder: (context) => HomeScreen(order: currentOrder)),
+            builder: (context) =>
+                HomeScreen(order: widget.order ?? Order(products: CartService().items))),
         (Route<dynamic> route) => false,
       );
       return;
     }
 
-    // 5: WhatsApp -> No cambia de pantalla, solo lanza URL
     if (index == 5) {
       _openWhatsApp(context);
       return;
     }
 
-    // Para las demás pantallas, usamos pushReplacement para sustituir la pantalla actual
     Widget? nextScreen;
 
     if (_userActive) {
-      if (index == 1) nextScreen = OrdersScreen(order: currentOrder);
-      if (index == 3) nextScreen = ProfileScreen(order: currentOrder);
+      if (index == 1) nextScreen = OrdersScreen(order: widget.order);
+      if (index == 3) nextScreen = ProfileScreen(order: widget.order);
     } else {
-      if (index == 2)
-        nextScreen =
-            LoginScreen(); // Login usualmente no recibe orden, pero cuidado al volver
+      if (index == 2) nextScreen = LoginScreen();
     }
 
     if (nextScreen != null) {
@@ -214,7 +177,6 @@ class _DescuentosPageState extends State<DescuentosPage> {
         MaterialPageRoute(builder: (context) => nextScreen!),
       );
     }
-    // Si index es 4 (Descuentos), no hacemos nada porque ya estamos aquí
   }
 
   @override
@@ -242,30 +204,45 @@ class _DescuentosPageState extends State<DescuentosPage> {
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: _onWillPop, // Usa la misma lógica segura al volver
+            onPressed: _onWillPop,
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.shopping_cart),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CartScreen(
-                      productsInCart: currentOrder.products ?? [],
-                      updateCounter: updateCounterFromCart,
-                      order: currentOrder,
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CartScreen(
+                          productsInCart: CartService().items,
+                          updateCounter: (_) => setState(_syncWithCart),
+                          order: widget.order ?? Order(),
+                        ),
+                      ),
+                    ).then((_) => setState(_syncWithCart));
+                  },
+                ),
+                if (productCounter > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                          color: Colors.red, shape: BoxShape.circle),
+                      child: Text(
+                        "$productCounter",
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11),
+                      ),
                     ),
                   ),
-                ).then((_) {
-                  // Al volver del carrito, forzamos la actualización visual
-                  setState(() {
-                    _syncProductsWithCart();
-                    _updateCounter();
-                  });
-                });
-              },
-            )
+              ],
+            ),
           ],
         ),
         body: _isLoading
@@ -366,7 +343,7 @@ class _DescuentosPageState extends State<DescuentosPage> {
               const BottomNavigationBarItem(
                   icon: Icon(Icons.message_rounded), label: 'WhatsApp'),
             ],
-            onTap: _handleNavigation, // Usamos la función corregida
+            onTap: _handleNavigation,
           ),
         ),
       ),

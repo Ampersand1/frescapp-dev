@@ -23,7 +23,6 @@ class OrderDetailScreen extends StatefulWidget {
       {super.key, required this.productsInCart, required this.order});
 
   @override
-  // ignore: library_private_types_in_public_api
   _OrderDetailScreenState createState() => _OrderDetailScreenState();
 }
 
@@ -45,21 +44,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     getOrderDetailsFromSharedPreferences();
     _checkTokenValidity();
   }
-
-  // --- LOGICA DE DESCUENTOS (Misma que en CartScreen) ---
-  double _getProductDiscount(Product product) {
-    if (product.name != null) {
-      if (product.name!.length % 3 == 0) return 0.20; // 20%
-      if (product.name!.length % 5 == 0) return 0.10; // 10%
-    }
-    return 0.0;
-  }
-
-  double _calculateDiscountedPrice(
-      double originalPrice, double discountPercent) {
-    return originalPrice * (1 - discountPercent);
-  }
-  // -----------------------------------------------------
 
   void getOrderDetailsFromSharedPreferences() async {
     try {
@@ -94,7 +78,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       if (kDebugMode) {
         print('Error opening WhatsApp: $error');
       }
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error al abrir WhatsApp.'),
@@ -128,20 +111,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // CÁLCULO DE TOTALES Y AHORROS
+    // -------------------------------
+    // CÁLCULO REAL DE TOTALES
+    // -------------------------------
     double finalTotal = 0;
     double totalSavings = 0;
 
     for (var product in widget.productsInCart) {
-      double originalPrice = (product.priceSale ?? 0).toDouble();
-      double discountPercent = _getProductDiscount(product);
-      double priceToUse = originalPrice;
+      double originalPrice = product.priceSale ?? 0;
+      double finalPrice = product.finalPrice ?? originalPrice;
+      bool hasDiscount = product.hasDiscount;
 
-      if (discountPercent > 0) {
-        priceToUse = _calculateDiscountedPrice(originalPrice, discountPercent);
-        totalSavings += (originalPrice - priceToUse) * (product.quantity ?? 0);
+      if (hasDiscount) {
+        totalSavings += (originalPrice - finalPrice) * (product.quantity ?? 0);
       }
-      finalTotal += priceToUse * (product.quantity ?? 0);
+
+      finalTotal += finalPrice * (product.quantity ?? 0);
     }
 
     return Scaffold(
@@ -154,14 +139,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // TOTAL A PAGAR
+              // TOTAL
               Text(
                 'Total: \$ ${NumberFormat('#,###').format(finalTotal)}',
                 style:
                     const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              
-              // VISUALIZACIÓN DEL AHORRO
+
+              // AHORRO
               if (totalSavings > 0) ...[
                 const SizedBox(height: 5),
                 Text(
@@ -233,7 +218,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  // Pasamos los totales calculados para no recalcular todo de cero
                   _confirmOrder(context, finalTotal, totalSavings);
                 },
                 child: const Text('Confirmar Pedido'),
@@ -292,10 +276,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               OrdersScreen(order: widget.order)),
                     ),
               if (!_userActive)
-                () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => LoginScreen()),
-                    ),
+                () => Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => LoginScreen())),
               if (_userActive)
                 () => Navigator.push(
                       context,
@@ -346,13 +328,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   bool _isSelectableDate(DateTime day) {
-    if (day.weekday == DateTime.sunday) {
-      return false;
-    }
-    return true;
+    return day.weekday != DateTime.sunday;
   }
 
-  void _confirmOrder(BuildContext context, double calculatedTotal, double calculatedSavings) {
+  void _confirmOrder(
+      BuildContext context, double calculatedTotal, double calculatedSavings) {
     if (selectedDeliverySlot == 'Horario de entrega' ||
         selectedPaymentMethod == 'Método de pago') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -365,20 +345,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
 
     widget.order.products = widget.productsInCart;
-    // Aquí guardamos el ahorro calculado
-    widget.order.discount = calculatedSavings; 
-    // Aquí guardamos el total real a pagar (ya con descuento)
+    widget.order.discount = calculatedSavings;
     widget.order.total = calculatedTotal;
-    
     widget.order.deliverySlot = selectedDeliverySlot!;
     widget.order.paymentMethod = selectedPaymentMethod!;
-    widget.order.deliveryDate = DateFormat('yyyy-MM-dd').format(selectedDate);
+    widget.order.deliveryDate =
+        DateFormat('yyyy-MM-dd').format(selectedDate);
 
     Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (context) =>
-              OrderConfirmationScreen(orderDetails: widget.order)),
+        builder: (context) =>
+            OrderConfirmationScreen(orderDetails: widget.order),
+      ),
     ).catchError((error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
